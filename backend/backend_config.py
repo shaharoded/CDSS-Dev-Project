@@ -13,4 +13,4 @@ INSET_LOINC_CODE_QUERY = 'queries/insert_loinc.sql'
 # SQL Queries
 CHECK_PATIENT_QUERY = 'queries/check_patient.sql'
 CHECK_TABLE_EXISTS_QUERY = 'queries/check_table_exists.sql'
-SEARCH_HISTORY_QUERY = 'queries/search_history.sql'
+SEARCH_HISTORY_QUERY = 'queries/get_history.sql'
