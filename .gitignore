@@ -1,0 +1,9 @@
+# Ignore specific files
+data/Loinc_2.80.zip
+cdss.db
+cdss.db-journal
+
+# Ignore an entire folder
+venv/
+__pycache__/
+data/loinc_extracted/
