@@ -66,11 +66,13 @@ Once you updates the __main__ of each module:
 
 You can run the folowing PowerShell command in the root repository to initiate the DataAccess class and build your DB:
 ```bash
+(from root)
 python -m backend.dataaccess
 ```
 
 You can run the folowing PowerShell command in the root repository to test your business logic:
 ```bash
+(from root)
 python -m backend.businesslogic
 ```
 
@@ -84,6 +86,7 @@ rm cdss.db
 In order to run the application, you'll need to navigate to the frontend folder and run the code from there:
 
 ```bash
+(from root)
 cd frontend
 python userinterface.py
 ```
