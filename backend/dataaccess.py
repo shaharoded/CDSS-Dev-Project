@@ -10,10 +10,13 @@ from backend.backend_config import *
 
 
 class DataAccess:
-    def __init__(self, db_path='cdss.db'):
+    def __init__(self, db_path=DB_PATH):
         '''
         Initialize the DataAccess class, connecting to the SQLite database and creating tables if they don't exist.
         :param db_path: The path to the SQLite database file.
+
+        Args:
+            db_path (str): The path to the SQLite database file. Configured in backend_config.py.
         '''
         self.db_path = db_path
         self.conn = sqlite3.connect(db_path)

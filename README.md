@@ -7,22 +7,23 @@ Developing a CDSS as a mini project
 cdss-dev-project/
 │
 ├── data/
-│   ├── patients.csv
+│   ├── project_db.xlsx       # Patients file
+│   ├── cdss.db               # Processed DB for all operations. Created on the first run
 │   ├── Loinc_2.80.zip
-│   ├── loinc_extracted/      # Extracted on first run   
 │
 ├── queries/                  # All of the queries for initialization, data access and business logic
 │
 ├── backend/
+│   ├── backend_config.py     # Configuration file for the backend operations
 │   ├── dataaccess.py
 │   ├── businesslogic.py
 │
 ├── frontend/
+│   ├── images/               # Images used for design
 │   ├── userinterface.py
 │
 ├── README.md
 ├── requirements.txt
-└── main.py
 ```
 
 ## Installation
@@ -80,7 +81,12 @@ rm cdss.db
 ```
 
 ### Run APP
-TO-DO
+In order to run the application, you'll need to navigate to the frontend folder and run the code from there:
+
+```bash
+cd frontend
+python userinterface.py
+```
 
 ## GIT Commit Tips
 Once you've made changes, commit and push as usual:

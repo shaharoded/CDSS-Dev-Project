@@ -7,6 +7,7 @@ SQL queries and data access functions.
 All SQL queries are saved separately under /queries/
 """
 
+# Local Code
 from backend.dataaccess import DataAccess
 from backend.backend_config import *  # all query paths
 
@@ -92,7 +93,7 @@ class PatientRecord:
         - Update value using UPDATE_MEASUREMENT_QUERY.
         - Handle edge cases: no matching record.
         """
-        pass
+        raise NotImplementedError("Update measurement not implemented yet")
 
     @staticmethod
     def delete_measurement(first_name, last_name, loinc_num, valid_start_time):
@@ -103,7 +104,7 @@ class PatientRecord:
         - Delete using DELETE_MEASUREMENT_QUERY.
         - Handle edge cases: no matching record.
         """
-        pass
+        raise NotImplementedError("Update measurement not implemented yet")
 
 # Local Tests
 if __name__ == '__main__':
