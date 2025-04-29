@@ -11,9 +11,12 @@ cdss-dev-project/
 │   ├── cdss.db               # Processed DB for all operations. Created on the first run
 │   ├── Loinc_2.80.zip
 │
-├── queries/                  # All of the queries for initialization, data access and business logic
-│
 ├── backend/
+├── ├── queries/              # All of the queries for initialization, data access and business logic
+│   │   ├── create_patients_table.sql
+│   │   ├── create_loinc_table.sql
+│   │   ├── insert_patient.sql
+│   │   └── ...
 │   ├── backend_config.py     # Configuration file for the backend operations
 │   ├── dataaccess.py
 │   ├── businesslogic.py
