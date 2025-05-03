@@ -2,5 +2,5 @@
 
 SELECT PatientId
 FROM Patients
-WHERE FirstName = ? AND LastName = ?
+WHERE PatientId = ? AND FirstName = ? AND LastName = ?
 LIMIT 1;
