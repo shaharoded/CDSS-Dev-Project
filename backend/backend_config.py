@@ -21,3 +21,4 @@ INSET_LOINC_CODE_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'inser
 CHECK_PATIENT_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_patient.sql')
 CHECK_TABLE_EXISTS_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_table_exists.sql')
 SEARCH_HISTORY_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_history.sql')
+UPDATE_MEASUREMENT_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'update_measurement.sql')
