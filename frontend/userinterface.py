@@ -9,12 +9,27 @@ from datetime import datetime
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import backend.businesslogic as bs
 
+def add_placeholder(entry, text):
+    entry.insert(0, text)
+    entry.config(foreground='gray')
+    def on_focus_in(event):
+        if entry.get() == text:
+            entry.delete(0, tk.END)
+            entry.config(foreground='black')
+    def on_focus_out(event):
+        if entry.get() == '':
+            entry.insert(0, text)
+            entry.config(foreground='gray')
+    entry.bind('<FocusIn>', on_focus_in)
+    entry.bind('<FocusOut>', on_focus_out)
+
 class CreateToolTip:
     def __init__(self, widget, text='widget info'):
         self.widget = widget
         self.text = text
         self.widget.bind("<Enter>", self.enter)
         self.widget.bind("<Leave>", self.close)
+
 
     def enter(self, event=None):
         x, y, _, _ = self.widget.bbox("insert")
@@ -43,6 +58,9 @@ class CDSSApp(tk.Tk):
         self.entries = {}
         self._setup_ui()
 
+    def clear_fields(self):
+        for key, entry in self.entries.items():
+            entry.delete(0, tk.END)
     def _setup_ui(self):
         # --- Logo and Title ---
         title_frame = ttk.Frame(self)
@@ -60,8 +78,9 @@ class CDSSApp(tk.Tk):
         input_frame = ttk.LabelFrame(self, text="Patient Measurement Entry", padding=10)
         input_frame.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
 
-        labels = ['First Name', 'Last Name', 'LOINC Code', 'Value', 'Unit', 'Valid Start Time', 'Transaction Time']
+        labels = ['Patient ID','First Name', 'Last Name', 'LOINC Code', 'Value', 'Unit', 'Valid Start Time', 'Transaction Time']
         placeholders = {
+            'Patient ID': 'e.g., 123456789',
             'First Name': 'e.g., John',
             'Last Name': 'e.g., Doe',
             'LOINC Code': 'e.g., 1234-5',
@@ -71,6 +90,7 @@ class CDSSApp(tk.Tk):
             'Transaction Time': 'e.g., 27/5/2018 10:00'
         }
         tooltips = {
+            'Patient ID': 'Required for all operations',
             'First Name': 'Required for all operations',
             'Last Name': 'Required for all operations',
             'LOINC Code': 'Required for Insert / Update / Delete operations',
@@ -83,8 +103,9 @@ class CDSSApp(tk.Tk):
         for idx, label in enumerate(labels):
             ttk.Label(input_frame, text=label).grid(row=idx, column=0, sticky="w", pady=2)
             entry = ttk.Entry(input_frame, width=40)
-            entry.insert(0, placeholders[label])
+            #entry.insert(0, placeholders[label])
             entry.grid(row=idx, column=1, pady=2)
+            add_placeholder(entry, placeholders[label])
             CreateToolTip(entry, text=tooltips[label])
             self.entries[label] = entry
 
@@ -97,7 +118,7 @@ class CDSSApp(tk.Tk):
 
         # --- Buttons ---
         button_frame = ttk.Frame(self, padding=10)
-        button_frame.grid(row=3, column=0, pady=10)
+        button_frame.grid(row=3, column=0, pady=10, sticky="w")
 
         ttk.Button(button_frame, text="Insert Measurement", command=self.insert_measurement).grid(row=0, column=0, padx=5)
         ttk.Button(button_frame, text="Show History", command=self.show_history).grid(row=0, column=1, padx=5)
@@ -107,7 +128,7 @@ class CDSSApp(tk.Tk):
     def _get(self, key):
         return self.entries[key].get().strip()
 
-    def insert_measurement(self):
+    def insert_measurement(self): #will need to add id as well
         try:
             pr = bs.PatientRecord(self._get('First Name'), self._get('Last Name'))
             pr.insert_measurement(
@@ -127,7 +148,11 @@ class CDSSApp(tk.Tk):
         try:
             first = self._get('First Name')
             last = self._get('Last Name')
-            history = bs.PatientRecord.search_history(first, last)
+            history = bs.PatientRecord.search_history(
+                self._get('Patient ID').strip(),
+                self._get('First Name'),
+                self._get('Last Name')
+            )
 
             self.listbox.delete(0, tk.END)
             if not history:
@@ -161,6 +186,7 @@ class CDSSApp(tk.Tk):
     def update_measurement(self):
         try:
             bs.PatientRecord.update_measurement(
+                self._get('Patient ID'),
                 self._get('First Name'),
                 self._get('Last Name'),
                 self._get('LOINC Code'),
@@ -175,7 +201,7 @@ class CDSSApp(tk.Tk):
         except Exception as ex:
             mb.showerror("Error", f"Unexpected error: {ex}")
 
-    def delete_measurement(self):
+    def delete_measurement(self): #will need to add id as well
         try:
             bs.PatientRecord.delete_measurement(
                 self._get('First Name'),
