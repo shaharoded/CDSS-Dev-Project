@@ -29,6 +29,19 @@ class PatientRecord:
         self.first_name = first_name
         self.last_name = last_name
 
+    def check_patient(self):
+        # Check if PatientId exists (without name check)
+        patient_by_id = data._fetch_records(CHECK_PATIENT_BY_ID_QUERY, (self.patient_id,))
+        if patient_by_id:
+            db_first, db_last = patient_by_id[0]
+            return db_first, db_last  # Return name from DB
+        return None
+
+    def register_patient(self):
+        # Insert new patient
+        data._execute_query(INSERT_PATIENT_QUERY, (self.first_name, self.last_name, self.patient_id))
+        # DEBUG: Check if patient was inserted
+        print("DEBUG: Patients in DB:", data.cur.execute("SELECT * FROM Patients").fetchall())
 
     def insert_measurement(self, loinc_num, value, unit, valid_start_time, transaction_time):
         """
@@ -38,7 +51,15 @@ class PatientRecord:
         - Insert measurement using INSERT_MEASUREMENT_QUERY.
         - Raise PatientNotFound if not exists.
         """
-        pass
+        patient = data._fetch_records(CHECK_PATIENT_QUERY, (self.patient_id, self.first_name, self.last_name))
+        if not patient:
+            raise PatientNotFound("Patient not found")
+
+            # Insert measurement
+        data._execute_query(
+            INSERT_MEASUREMENT_QUERY,
+            (self.patient_id, loinc_num, value, unit, valid_start_time, transaction_time)
+        )
 
     @staticmethod
     def search_history(patient_id, first_name, last_name, loinc_num=None, date_range=None, time_range=None):
@@ -56,7 +77,7 @@ class PatientRecord:
         """
 
         # Fetch patient_id
-        patient = data._fetch_records(CHECK_PATIENT_QUERY, (patient_id, first_name, last_name))
+        patient = data._fetch_records(CHECK_PATIENT_BY_ID_QUERY, (patient_id,))
         if not patient:
             raise PatientNotFound("Patient not found")
         #patient_id = patient[0][0] #just the index of the patient in the array, not a unique id for the patient
@@ -89,39 +110,6 @@ class PatientRecord:
 
         result = data.cur.execute(final_query, params).fetchall()
         return result
-
-
-    """
-    def update_measurement(patient_id, first_name, last_name, loinc_num, valid_start_time, new_value):
-        
-        Update an existing measurement value.
-
-        - Use CHECK_PATIENT_QUERY to verify existence.
-        - Update value using UPDATE_MEASUREMENT_QUERY.
-        - Handle edge cases: no matching record.
-        
-        # Verify patient exists
-        patient = data._fetch_records(CHECK_PATIENT_QUERY, (patient_id,first_name, last_name))
-        if not patient:
-            raise PatientNotFound("Patient not found")
-        #patient_id = patient[0][0]
-        #patient_id = patient_id
-        #print(f"this is the id {patient_id}")
-
-        # Check if measurement exists
-        rows = data.cur.execute(
-            "SELECT 1 FROM Measurements WHERE PatientId = ? AND LoincNum = ? AND ValidStartTime = ?",
-            (patient_id, loinc_num, valid_start_time)
-        ).fetchall()
-        if not rows:
-            raise Exception(f"Measurement not found to update.")
-
-        # Update the measurement value
-        with open(UPDATE_MEASUREMENT_QUERY, 'r') as f:
-            query = f.read()
-        data.cur.execute(query, (new_value, patient_id, loinc_num, valid_start_time))
-        data.conn.commit()
-"""
 
     @staticmethod
     def update_measurement(patient_id, first_name, last_name, loinc_num, valid_start_time, new_value):
@@ -169,33 +157,3 @@ class PatientRecord:
         """
         raise NotImplementedError("Update measurement not implemented yet")
 
-# Local Tests
-if __name__ == '__main__':
-
-    """print("Running local tests...")
-
-    # Try fetching history for an existing patient
-    name = "Gus"
-    last_name = "McRae"
-    id = "456789015"
-    result = PatientRecord.search_history(id, name, last_name)
-    print(f"History for {name} {last_name}:")
-    for row in result:
-        print(row)
-    # --- Test: Update Measurement ---
-    loinc_num = "20252-3"  # ← replace with an actual LOINC-NUM from your data
-    valid_start_time = "2018-05-20 07:00:00"  # ← replace with the actual timestamp from your data
-    new_value = "555"  # or any test value you want to set
-
-    # Run the update
-    try:
-        PatientRecord.update_measurement(id, name, last_name, loinc_num, valid_start_time, new_value)
-        print(f"Updated measurement {loinc_num} at {valid_start_time} to {new_value}")
-    except Exception as e:
-        print(f"Update failed: {e}")
-
-    # --- Re-check history to verify update ---
-    result = PatientRecord.search_history(id, name, last_name)
-    print(f"Updated history for {name} {last_name}:")
-    for row in result:
-        print(row)"""

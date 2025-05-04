@@ -67,35 +67,6 @@ class DataAccess:
         result = self._fetch_records(CHECK_TABLE_EXISTS_QUERY, ())
         return bool(result)
 
-
-    """def _load_patients_from_excel(self):
-        
-        Load patients from an Excel file and insert them into the Patients table.
-        
-        df = pd.read_excel(PATIENTS_FILE)
-
-        if df.empty:
-            print('[Info]: No patients data found to load.')
-            return
-
-        for _, row in df.iterrows():
-            self._execute_query(INSERT_PARIENT_QUERY, (row['PatientId'], row['First name'], row['Last name']))
-            #patient_id = self._fetch_records(CHECK_PATIENT_QUERY, (row['First name'], row['Last name']))[0][0]
-            
-            self._execute_query(
-                INSERT_MEASUREMENT_QUERY,
-                (
-                    row['PatientId'],
-                    row['LOINC-NUM'],
-                    row['Value'],
-                    row['Unit'],
-                    str(row['Valid start time']),
-                    str(row['Transaction time'])
-                )
-            )
-
-        print(f'[Info]: Loaded {len(df)} records from Excel file to DB tables.')"""
-
     def _load_patients_from_excel(self):
         df = pd.read_excel(PATIENTS_FILE)
 
