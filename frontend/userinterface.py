@@ -124,13 +124,59 @@ class CDSSApp(tk.Tk):
         ttk.Button(button_frame, text="Show History", command=self.show_history).grid(row=0, column=1, padx=5)
         ttk.Button(button_frame, text="Update Measurement", command=self.update_measurement).grid(row=0, column=2, padx=5)
         ttk.Button(button_frame, text="Delete Measurement", command=self.delete_measurement).grid(row=0, column=3, padx=5)
+        ttk.Button(button_frame, text="Register Patient", command=self.register_patient).grid(row=0, column=4, padx=5)
 
     def _get(self, key):
         return self.entries[key].get().strip()
 
-    def insert_measurement(self): #will need to add id as well
+    def register_patient(self):
         try:
-            pr = bs.PatientRecord(self._get('First Name'), self._get('Last Name'))
+            required_fields = ['Patient ID', 'First Name', 'Last Name']
+            for field in required_fields:
+                value = self._get(field)
+                placeholder = f"e.g., {field.split()[0]}"  # matches your placeholders
+                if not value or value.startswith("e.g.,"):
+                    mb.showerror("Error", f"The field '{field}' is required.")
+                    return
+
+            patient_id = self._get('Patient ID')
+            first_name = self._get('First Name')
+            last_name = self._get('Last Name')
+
+            pr = bs.PatientRecord(patient_id, first_name, last_name)
+            exists = pr.check_patient()
+
+            if exists:
+                db_first, db_last = exists
+                if db_first != first_name or db_last != last_name:
+                    mb.showerror("Error",
+                                 f"ID {patient_id} already exists under a different name: {db_first} {db_last}")
+                    return
+                else:
+                    mb.showinfo("Info", f"Patient with ID {patient_id} is already registered.")
+                    return
+
+            pr.register_patient()
+            mb.showinfo("Success", "Patient registered successfully!")
+
+        except Exception as ex:
+            mb.showerror("Error", f"Unexpected error: {ex}")
+
+    def insert_measurement(self):
+        try:
+            required_fields = ['Patient ID', 'First Name', 'Last Name', 'LOINC Code', 'Value', 'Unit',
+                               'Valid Start Time', 'Transaction Time']
+            for field in required_fields:
+                if not self._get(field):
+                    mb.showerror("Error", f"The field '{field}' is required.")
+                    return
+
+            pr = bs.PatientRecord(self._get('Patient ID'), self._get('First Name'), self._get('Last Name'))
+            exists = pr.check_patient()
+            if not exists:
+                mb.showerror("Error", f"Patient with ID {pr.patient_id} is not registered. Please register first.")
+                return
+
             pr.insert_measurement(
                 self._get('LOINC Code'),
                 self._get('Value'),
@@ -139,6 +185,7 @@ class CDSSApp(tk.Tk):
                 self._get('Transaction Time')
             )
             mb.showinfo("Success", "Measurement inserted successfully!")
+
         except bs.PatientNotFound:
             mb.showerror("Error", "Patient not found.")
         except Exception as ex:
