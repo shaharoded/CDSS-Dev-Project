@@ -7,6 +7,7 @@ SQL queries and data access functions.
 All SQL queries are saved separately under /queries/
 """
 import pandas as pd
+import re
 
 # Local Code
 from backend.dataaccess import DataAccess
@@ -22,8 +23,12 @@ def validate_patient_id(patient_id):
         raise ValueError("Patient ID must be exactly 9 digits long.")
 
 def validate_name(name, field_name):
-    if not name.isalpha():
-        raise ValueError(f"{field_name} must contain alphabetic characters only.")
+    """
+    Allows alphabetic names with optional hyphens or apostrophes.
+    """
+    pattern = r"^[A-Za-z'-]+$"
+    if not re.fullmatch(pattern, name):
+        raise ValueError(f"{field_name} must contain only letters, hyphens (-), or apostrophes (').")
 
 def validate_datetime(dt_string):
     try:
@@ -308,7 +313,7 @@ if __name__ == "__main__":
 
     try:
         print("\n🧪 Test 3: Register a new patient (should succeed or fail if already exists)...")
-        record.register_patient("123456789", "Alice", "Smith")
+        record.register_patient("208388918", "Shahar", "Oded")
         print("✅ Registered patient successfully")
     except Exception as e:
         print(f"❌ Test 3 failed: {e}")

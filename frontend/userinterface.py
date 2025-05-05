@@ -77,8 +77,8 @@ class Application(tk.Tk):
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Get Patient by Name")
 
-        self.get_first_name = self._add_labeled_entry(tab, "First Name", "• A patient's first name\n• e.g. John")
-        self.get_last_name = self._add_labeled_entry(tab, "Last Name", "• A patient's last name\n• e.g. Doe")
+        self.search_first_name = self._add_labeled_entry(tab, "First Name", "• A patient's first name\n• e.g. John")
+        self.search_last_name = self._add_labeled_entry(tab, "Last Name", "• A patient's last name\n• e.g. Doe")
 
         tk.Button(tab, text="Get Patient", command=self.get_patient_by_name).pack(pady=10)
         self.get_result = tk.Text(tab, height=10)
@@ -102,11 +102,11 @@ class Application(tk.Tk):
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Insert Patient")
 
-        self.update_pid = self._add_labeled_entry(tab, "Patient ID", "• A 9 digit number\n• e.g. 208399845")
-        self.update_first_name = self._add_labeled_entry(tab, "First Name", "• A patient's first name\n• e.g. John")
-        self.update_last_name = self._add_labeled_entry(tab, "Last Name", "• A patient's last name\n• e.g. Doe")
+        self.insert_patient_update_pid = self._add_labeled_entry(tab, "Patient ID", "• A 9 digit number\n• e.g. 208399845")
+        self.insert_patient_update_first_name = self._add_labeled_entry(tab, "First Name", "• A patient's first name\n• e.g. John")
+        self.insert_patient_update_last_name = self._add_labeled_entry(tab, "Last Name", "• A patient's last name\n• e.g. Doe")
 
-        tk.Button(tab, text="Insert Patient", command=self.insert_measurement).pack(pady=10)
+        tk.Button(tab, text="Insert Patient", command=self.insert_patient).pack(pady=10)
         self.update_result = tk.Text(tab, height=5)
         self.update_result.pack()
 
@@ -114,11 +114,11 @@ class Application(tk.Tk):
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Insert Measurement")
 
-        self.update_pid = self._add_labeled_entry(tab, "Patient ID", "• A 9 digit number\n• e.g. 208399845")
-        self.update_loinc = self._add_labeled_entry(tab, "LOINC Code", "• A valid LOINC code\n• e.g. 2055-2")
-        self.update_time = self._add_labeled_entry(tab, "Valid Start Time", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024")
-        self.update_value = self._add_labeled_entry(tab, "New Value", "• Numeric or textual value\n• e.g. 12.5")
-        self.update_transaction_time = self._add_labeled_entry(tab, "Transaction Time (Optional)", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024\n• Allows to create retro updates, as if created in past time\n• If empty, will automatically use current date-time")
+        self.insert_measurement_update_pid = self._add_labeled_entry(tab, "Patient ID", "• A 9 digit number\n• e.g. 208399845")
+        self.insert_measurement_update_loinc = self._add_labeled_entry(tab, "LOINC Code", "• A valid LOINC code\n• e.g. 2055-2")
+        self.insert_measurement_update_time = self._add_labeled_entry(tab, "Valid Start Time", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024")
+        self.insert_measurement_update_value = self._add_labeled_entry(tab, "New Value", "• Numeric or textual value\n• e.g. 12.5")
+        self.insert_measurement_update_transaction_time = self._add_labeled_entry(tab, "Transaction Time (Optional)", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024\n• Allows to create retro updates, as if created in past time\n• If empty, will automatically use current date-time")
 
         tk.Button(tab, text="Insert Measurement", command=self.insert_measurement).pack(pady=10)
         self.update_result = tk.Text(tab, height=5)
@@ -128,11 +128,11 @@ class Application(tk.Tk):
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Update Measurement")
 
-        self.update_pid = self._add_labeled_entry(tab, "Patient ID", "• A 9 digit number\n• e.g. 208399845")
-        self.update_loinc = self._add_labeled_entry(tab, "LOINC Code", "• A valid LOINC code\n• e.g. 2055-2")
-        self.update_time = self._add_labeled_entry(tab, "Valid Start Time", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024")
-        self.update_value = self._add_labeled_entry(tab, "New Value", "• Numeric or textual value\n• e.g. 12.5")
-        self.update_transaction_time = self._add_labeled_entry(tab, "Transaction Time (Optional)", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024\n• Allows to create retro updates, as if created in past time\n• If empty, will automatically use current date-time")
+        self.update_measurement_update_pid = self._add_labeled_entry(tab, "Patient ID", "• A 9 digit number\n• e.g. 208399845")
+        self.update_measurement_update_loinc = self._add_labeled_entry(tab, "LOINC Code", "• A valid LOINC code\n• e.g. 2055-2")
+        self.update_measurement_update_time = self._add_labeled_entry(tab, "Valid Start Time", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024")
+        self.update_measurement_update_value = self._add_labeled_entry(tab, "New Value", "• Numeric or textual value\n• e.g. 12.5")
+        self.update_measurement_update_transaction_time = self._add_labeled_entry(tab, "Transaction Time (Optional)", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024\n• Allows to create retro updates, as if created in past time\n• If empty, will automatically use current date-time")
 
 
         tk.Button(tab, text="Update Measurement", command=self.update_measurement).pack(pady=10)
@@ -143,17 +143,17 @@ class Application(tk.Tk):
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Delete Measurement")
 
-        self.delete_pid = self._add_labeled_entry(tab, "Patient ID", "• A 9 digit number\n• e.g. 208399845")
-        self.delete_loinc = self._add_labeled_entry(tab, "LOINC Code", "• A valid LOINC code\n• e.g. 2055-2")
-        self.delete_time = self._add_labeled_entry(tab, "Valid Start Time", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024")
+        self.delete_measurement_delete_pid = self._add_labeled_entry(tab, "Patient ID", "• A 9 digit number\n• e.g. 208399845")
+        self.delete_measurement_delete_loinc = self._add_labeled_entry(tab, "LOINC Code", "• A valid LOINC code\n• e.g. 2055-2")
+        self.delete_measurement_delete_time = self._add_labeled_entry(tab, "Valid Start Time", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024")
 
         tk.Button(tab, text="Delete Measurement", command=self.delete_measurement).pack(pady=10)
         self.delete_result = tk.Text(tab, height=5)
         self.delete_result.pack()
 
     def get_patient_by_name(self):
-        first = self.get_first_name.get()
-        last = self.get_last_name.get()
+        first = self.search_first_name.get()
+        last = self.search_last_name.get()
         
         try:
             results = self.record.get_patient_by_name(first, last)
@@ -180,9 +180,9 @@ class Application(tk.Tk):
     def insert_patient(self):
         try:
             self.record.register_patient(
-                self.update_pid.get(),
-                self.update_first_name.get(),
-                self.update_last_name.get()
+                self.insert_patient_update_pid.get(),
+                self.insert_patient_update_first_name.get(),
+                self.insert_patient_update_last_name.get()
             )
             messagebox.showinfo("Success", "New patient inserted.")
         except Exception as e:
@@ -191,11 +191,11 @@ class Application(tk.Tk):
     def insert_measurement(self):
         try:
             self.record.insert_measurement(
-                self.update_pid.get(),
-                self.update_loinc.get(),
-                self.update_time.get(),
-                self.update_value.get(),
-                self.update_transaction_time.get()
+                self.insert_measurement_update_pid.get(),
+                self.insert_measurement_update_loinc.get(),
+                self.insert_measurement_update_time.get(),
+                self.insert_measurement_update_value.get(),
+                self.insert_measurement_update_transaction_time.get()
             )
             messagebox.showinfo("Success", "Measurement inserted.")
         except Exception as e:
@@ -204,11 +204,11 @@ class Application(tk.Tk):
     def update_measurement(self):
         try:
             self.record.update_measurement(
-                self.update_pid.get(),
-                self.update_loinc.get(),
-                self.update_time.get(),
-                self.update_value.get(),
-                self.update_transaction_time.get()
+                self.update_measurement_update_pid.get(),
+                self.update_measurement_update_loinc.get(),
+                self.update_measurement_update_time.get(),
+                self.update_measurement_update_value.get(),
+                self.update_measurement_update_transaction_time.get()
             )
             messagebox.showinfo("Success", "Measurement updated.")
         except Exception as e:
@@ -217,9 +217,9 @@ class Application(tk.Tk):
     def delete_measurement(self):
         try:
             self.record.delete_measurement(
-                self.delete_pid.get(),
-                self.delete_loinc.get(),
-                self.delete_time.get()
+                self.delete_measurement_delete_pid.get(),
+                self.delete_measurement_delete_loinc.get(),
+                self.delete_measurement_delete_time.get()
             )
             messagebox.showinfo("Success", "Measurement deleted.")
         except Exception as e:
