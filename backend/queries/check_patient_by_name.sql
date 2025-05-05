@@ -1,7 +1,6 @@
--- Purpose: Fetch PatientId by FirstName and LastName
--- Might refer to more than 1 patient, but will return the 1st PatientId that match the criteria
+-- Purpose: Fetch All PatientIds by FirstName and LastName
+-- Will be used to verify the system ID for a patient if only the name is known.
 
-SELECT PatientId
+SELECT PatientId, FirstName, LastName
 FROM Patients
 WHERE FirstName = ? AND LastName = ?
-LIMIT 1;

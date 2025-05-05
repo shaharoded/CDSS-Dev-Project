@@ -1,3 +1,6 @@
--- Purpose: Fetch Patient Name by their unique PatientId
+-- Purpose: Check that a patient ID exists
 
-SELECT FirstName, LastName FROM Patients WHERE PatientId = ? LIMIT 1;
+SELECT 1
+FROM Patients
+WHERE PatientId = ?
+LIMIT 1;

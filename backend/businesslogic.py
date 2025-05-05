@@ -30,49 +30,21 @@ class PatientRecord:
         self.patient_id = patient_id
         self.first_name = first_name
         self.last_name = last_name
-
-    def check_patient(self):
-        # Check if PatientId exists (without name check)
-        patient_by_id = data._fetch_records(CHECK_PATIENT_BY_ID_QUERY, (self.patient_id,))
-        if patient_by_id:
-            db_first, db_last = patient_by_id[0]
-            return db_first, db_last  # Return name from DB
-        return None
-
-    def check_patient_by_id_only(self): #note:delete one of them
-        # Check if PatientId exists (without name check)
-        patient_by_id = data._fetch_records(CHECK_PATIENT_BY_ID_QUERY, (self.patient_id,))
-        if patient_by_id:
-            db_first, db_last = patient_by_id[0]
-            return db_first, db_last  # Return name from DB
-        return None
-
-    def register_patient(self):
-        # Insert new patient
-        data._execute_query(INSERT_PATIENT_QUERY, (self.first_name, self.last_name, self.patient_id))
-        # DEBUG: Check if patient was inserted
-        print("DEBUG: Patients in DB:", data.cur.execute("SELECT * FROM Patients").fetchall())
-
-    def insert_measurement(self, loinc_num, value, unit, valid_start_time, transaction_time):
+    
+    @staticmethod
+    def check_patient_by_name(first_name, last_name):
         """
-        Insert a new measurement for a patient.
-
-        - Use CHECK_PATIENT_QUERY to get patient_id.
-        - Insert measurement using INSERT_MEASUREMENT_QUERY.
-        - Raise PatientNotFound if not exists.
+        Returns the list of matching patients by their names.
         """
-        patient = data._fetch_records(CHECK_PATIENT_QUERY, (self.patient_id, self.first_name, self.last_name))
-        if not patient:
-            raise PatientNotFound("Patient not found")
-
-            # Insert measurement
-        data._execute_query(
-            INSERT_MEASUREMENT_QUERY,
-            (self.patient_id, loinc_num, value, unit, valid_start_time, transaction_time)
-        )
+        # Check if Patient Name exists (without name check)
+        matches = data._fetch_records(CHECK_PATIENT_BY_NAME_QUERY, (first_name, last_name))
+        if not matches:
+           raise PatientNotFound("Patient not found")
+         
+        return matches  # Return ID, First Name, Last Name from DB for every matching patient by name
 
     @staticmethod
-    def search_history(patient_id, first_name, last_name, loinc_num=None, date_range=None, time_range=None):
+    def search_history(patient_id, loinc_num=None, date_range=None, time_range=None):
         """
         Search patient measurement history.
 
@@ -87,12 +59,8 @@ class PatientRecord:
         """
 
         # Fetch patient_id
-        patient = data._fetch_records(CHECK_PATIENT_BY_ID_QUERY, (patient_id,))
-        if not patient:
+        if not data.check_patient_by_id(patient_id):
             raise PatientNotFound("Patient not found")
-        #patient_id = patient[0][0] #just the index of the patient in the array, not a unique id for the patient
-        patient_id = patient_id
-        print(f"this is the id {patient_id}")
 
         # Build dynamic filters
         filters = []
@@ -118,8 +86,35 @@ class PatientRecord:
 
         final_query = base_query.replace("{where_clause}", where_clause)
 
-        result = data.cur.execute(final_query, params).fetchall()
+        result = data._fetch_records(final_query, params)
         return result
+    
+    def register_patient(self):
+        """
+        Inserts a patient to the DB.
+        """
+        # Insert new patient
+        data._execute_query(INSERT_PATIENT_QUERY, (self.first_name, self.last_name, self.patient_id))
+        # # DEBUG: Check if patient was inserted
+        # print("[DEBUG]: Patients in DB:", data.cur.execute("SELECT * FROM Patients").fetchall())
+
+    def insert_measurement(self, loinc_num, value, unit, valid_start_time, transaction_time):
+        """
+        Insert a new measurement for a patient.
+
+        - Use CHECK_PATIENT_QUERY to get patient_id.
+        - Insert measurement using INSERT_MEASUREMENT_QUERY.
+        - Raise PatientNotFound if not exists.
+        """
+        patient = data._fetch_records(CHECK_PATIENT_BY_ID_QUERY, (self.patient_id,))
+        if not patient:
+            raise PatientNotFound("Patient not found")
+
+            # Insert measurement
+        data._execute_query(
+            INSERT_MEASUREMENT_QUERY,
+            (self.patient_id, loinc_num, value, unit, valid_start_time, transaction_time)
+        )
 
     @staticmethod
     def update_measurement(patient_id, first_name, last_name, loinc_num, valid_start_time, new_value):

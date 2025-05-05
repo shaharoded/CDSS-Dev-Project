@@ -22,14 +22,49 @@ class DataAccess:
         self.conn = sqlite3.connect(db_path)
         self.cur = self.conn.cursor()
 
-        if not self._check_tables_exist():
-            self._execute_script(INITIATE_PATIENTS_TABLE_DDL)
-            self._execute_script(INITIATE_LOINC_TABLE_DDL)
-            self._load_patients_from_excel()
-            self._load_loinc_from_zip()
-            self._print_db_info()
+        if not self.__check_tables_exist():
+            self.__execute_script(INITIATE_PATIENTS_TABLE_DDL)
+            self.__execute_script(INITIATE_LOINC_TABLE_DDL)
+            self.__load_patients_from_excel()
+            self.__load_loinc_from_zip()
+            self.__print_db_info()
 
-    def _execute_script(self, script_path):
+    def check_patient_by_id(self, patient_id):
+        """
+        Returns True if the given PatientId exists in the database.
+        """
+        result = self.fetch_records(CHECK_PATIENT_BY_ID_QUERY, (patient_id,))
+        return bool(result)
+    
+    def execute_query(self, query_or_path, params):
+        """
+        Executes an INSERT/UPDATE/DELETE query.
+        Accepts either a path to a .sql file or a raw SQL string.
+        """
+        if os.path.isfile(query_or_path):
+            with open(query_or_path, 'r') as file:
+                query = file.read()
+        else:
+            query = query_or_path  # assume raw SQL
+
+        self.cur.execute(query, params)
+        self.conn.commit()
+    
+    def fetch_records(self, query_or_path, params):
+        """
+        Executes a SELECT query.
+        Accepts either a path to a .sql file or a raw SQL string.
+        Returns all rows.
+        """
+        if os.path.isfile(query_or_path):
+            with open(query_or_path, 'r') as file:
+                query = file.read()
+        else:
+            query = query_or_path  # assume raw SQL
+
+        return self.cur.execute(query, params).fetchall()
+    
+    def __execute_script(self, script_path):
         """
         Execute a DDL script from a file.
         Used to initialize tables in the DB.
@@ -39,35 +74,14 @@ class DataAccess:
         self.cur.executescript(script)
         self.conn.commit()
 
-    def _execute_query(self, query_path, params):
-        """
-        Execute a query with parameters from a file.
-        Query execution -> INSERT, UPDATE, DELETE queries.
-        Used to load data to initialized tables in the DB.
-        """
-        with open(query_path, 'r') as file:
-            query = file.read()
-        self.cur.execute(query, params)
-        self.conn.commit()
-    
-    def _fetch_records(self, query_path, params):
-        """
-        Returning records from a query with parameters from a file.
-        Query fetched -> SELECT queries.
-        Used to return data from filled tables in the DB.
-        """
-        with open(query_path, 'r') as file:
-            query = file.read()
-        return self.cur.execute(query, params).fetchall()
-
-    def _check_tables_exist(self):
+    def __check_tables_exist(self):
         """
         Ensuring DB was initialized
         """
-        result = self._fetch_records(CHECK_TABLE_EXISTS_QUERY, ())
+        result = self.fetch_records(CHECK_TABLE_EXISTS_QUERY, ())
         return bool(result)
 
-    def _load_patients_from_excel(self):
+    def __load_patients_from_excel(self):
         df = pd.read_excel(PATIENTS_FILE)
 
         if df.empty:
@@ -85,14 +99,14 @@ class DataAccess:
 
         # Insert unique patients
         for _, row in unique_patients.iterrows():
-            self._execute_query(
+            self.execute_query(
                 INSERT_PATIENT_QUERY,
                 (row['First name'], row['Last name'], row['PatientId'])
             )
 
         # Insert measurements
         for _, row in df.iterrows():
-            self._execute_query(
+            self.execute_query(
                 INSERT_MEASUREMENT_QUERY,
                 (
                     row['PatientId'],
@@ -107,7 +121,7 @@ class DataAccess:
         print(
             f'[Info]: Loaded {len(df)} measurement records and {len(unique_patients)} unique patients from Excel file to DB tables.')
 
-    def _load_loinc_from_zip(self):
+    def __load_loinc_from_zip(self):
         """
         Load LOINC codes from a ZIP file and insert them into the Loinc table in the DB for future use.
         """
@@ -127,7 +141,7 @@ class DataAccess:
             print('[Info]: No LOINC codes found to load.')
         else:
             for _, row in df.iterrows():
-                self._execute_query(
+                self.execute_query(
                     INSET_LOINC_CODE_QUERY,
                     (row['LOINC_NUM'], row['COMPONENT'], row['PROPERTY'], row['TIME_ASPCT'],
                     row['SYSTEM'], row['SCALE_TYP'], row['METHOD_TYP'])
@@ -136,20 +150,19 @@ class DataAccess:
 
         shutil.rmtree(extract_path)
         
-    def _print_db_info(self):
+    def __print_db_info(self):
         """
-        Printing DB information, including the total number of tables created and the number of rows in each table.
+        Printing DB information, including the total number of tables created
+        and the number of rows in each table.
         """
         print("[Info]: DB initiated successfully!")
-        
-        tables = self.cur.execute(
-            "SELECT name FROM sqlite_master WHERE type='table';"
-        ).fetchall()
+
+        tables = self.fetch_records("SELECT name FROM sqlite_master WHERE type='table';", ())
 
         print(f"[Info]: Total tables created: {len(tables)}")
 
         for (table_name,) in tables:
-            count = self.cur.execute(f"SELECT COUNT(*) FROM {table_name};").fetchone()[0]
+            count = self.fetch_records(f"SELECT COUNT(*) FROM {table_name};", ())[0][0]
             print(f"[Info]: Table '{table_name}' - Rows: {count}")
 
 if __name__ == '__main__':
