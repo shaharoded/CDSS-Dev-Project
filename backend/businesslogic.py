@@ -211,5 +211,15 @@ class PatientRecord:
         - Delete using DELETE_MEASUREMENT_QUERY.
         - Handle edge cases: no matching record.
         """
+                # Verify input
+        if not data.check_patient(patient_id):
+            raise PatientNotFound("Patient not found")
+        if not data.check_loinc(loinc_num):
+            raise LoincCodeNotFound("Loinc code not found")
+        valid_start_time = validate_datetime(valid_start_time).strftime('%Y-%m-%d %H:%M:%S')
+        if not data.check_record(patient_id, loinc_num, valid_start_time):
+            raise RecordNotFound("This record was not found in the DB")
+        
+        # Continue from here
         raise NotImplementedError("Update measurement not implemented yet")
 
