@@ -9,12 +9,27 @@ from datetime import datetime
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import backend.businesslogic as bs
 
+def add_placeholder(entry, text):
+    entry.insert(0, text)
+    entry.config(foreground='gray')
+    def on_focus_in(event):
+        if entry.get() == text:
+            entry.delete(0, tk.END)
+            entry.config(foreground='black')
+    def on_focus_out(event):
+        if entry.get() == '':
+            entry.insert(0, text)
+            entry.config(foreground='gray')
+    entry.bind('<FocusIn>', on_focus_in)
+    entry.bind('<FocusOut>', on_focus_out)
+
 class CreateToolTip:
     def __init__(self, widget, text='widget info'):
         self.widget = widget
         self.text = text
         self.widget.bind("<Enter>", self.enter)
         self.widget.bind("<Leave>", self.close)
+
 
     def enter(self, event=None):
         x, y, _, _ = self.widget.bbox("insert")
@@ -43,6 +58,9 @@ class CDSSApp(tk.Tk):
         self.entries = {}
         self._setup_ui()
 
+    def clear_fields(self):
+        for key, entry in self.entries.items():
+            entry.delete(0, tk.END)
     def _setup_ui(self):
         # --- Logo and Title ---
         title_frame = ttk.Frame(self)
@@ -60,8 +78,9 @@ class CDSSApp(tk.Tk):
         input_frame = ttk.LabelFrame(self, text="Patient Measurement Entry", padding=10)
         input_frame.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
 
-        labels = ['First Name', 'Last Name', 'LOINC Code', 'Value', 'Unit', 'Valid Start Time', 'Transaction Time']
+        labels = ['Patient ID','First Name', 'Last Name', 'LOINC Code', 'Value', 'Unit', 'Valid Start Time', 'Transaction Time']
         placeholders = {
+            'Patient ID': 'e.g., 123456789',
             'First Name': 'e.g., John',
             'Last Name': 'e.g., Doe',
             'LOINC Code': 'e.g., 1234-5',
@@ -71,6 +90,7 @@ class CDSSApp(tk.Tk):
             'Transaction Time': 'e.g., 27/5/2018 10:00'
         }
         tooltips = {
+            'Patient ID': 'Required for all operations',
             'First Name': 'Required for all operations',
             'Last Name': 'Required for all operations',
             'LOINC Code': 'Required for Insert / Update / Delete operations',
@@ -83,8 +103,9 @@ class CDSSApp(tk.Tk):
         for idx, label in enumerate(labels):
             ttk.Label(input_frame, text=label).grid(row=idx, column=0, sticky="w", pady=2)
             entry = ttk.Entry(input_frame, width=40)
-            entry.insert(0, placeholders[label])
+            #entry.insert(0, placeholders[label])
             entry.grid(row=idx, column=1, pady=2)
+            add_placeholder(entry, placeholders[label])
             CreateToolTip(entry, text=tooltips[label])
             self.entries[label] = entry
 
@@ -97,29 +118,105 @@ class CDSSApp(tk.Tk):
 
         # --- Buttons ---
         button_frame = ttk.Frame(self, padding=10)
-        button_frame.grid(row=3, column=0, pady=10)
+        button_frame.grid(row=3, column=0, pady=10, sticky="w")
 
         ttk.Button(button_frame, text="Insert Measurement", command=self.insert_measurement).grid(row=0, column=0, padx=5)
         ttk.Button(button_frame, text="Show History", command=self.show_history).grid(row=0, column=1, padx=5)
         ttk.Button(button_frame, text="Update Measurement", command=self.update_measurement).grid(row=0, column=2, padx=5)
         ttk.Button(button_frame, text="Delete Measurement", command=self.delete_measurement).grid(row=0, column=3, padx=5)
+        ttk.Button(button_frame, text="Register Patient", command=self.register_patient).grid(row=0, column=4, padx=5)
 
     def _get(self, key):
         return self.entries[key].get().strip()
 
+    def register_patient(self):
+        try:
+            # Check that required fields are filled and not just placeholders
+            required_fields = ['Patient ID', 'First Name', 'Last Name']
+            for field in required_fields:
+                value = self._get(field).strip()
+                placeholder = f"e.g., {field.split()[0]}"
+                if not value or value.startswith("e.g.,"):
+                    mb.showerror("Error", f"The field '{field}' is required.")
+                    return
+
+            patient_id = self._get('Patient ID').strip()
+            first_name = self._get('First Name').strip()
+            last_name = self._get('Last Name').strip()
+
+            from backend.businesslogic import validate_patient_id, validate_name, validate_loinc, validate_datetime
+            bs.validate_patient_id(patient_id)
+            bs.validate_name(first_name, "First Name")
+            bs.validate_name(last_name, "Last Name")
+
+            # Check if patient already exists
+            pr = bs.PatientRecord(patient_id, first_name, last_name)
+            exists = pr.check_patient_by_id_only()
+
+            if exists:
+                db_first, db_last = exists
+                if db_first != first_name or db_last != last_name:
+                    mb.showerror("Error",
+                                 f"Patient ID {patient_id} already exists under a different name: {db_first} {db_last}.")
+                    return
+                else:
+                    mb.showinfo("Info", f"Patient with ID {patient_id} is already registered.")
+                    return
+
+            # Register new patient
+            pr.register_patient()
+            mb.showinfo("Success", "Patient registered successfully!")
+
+        except ValueError as ve:
+            mb.showerror("Input Error", str(ve))
+        except Exception as ex:
+            mb.showerror("Error", f"Unexpected error: {ex}")
+
     def insert_measurement(self):
         try:
-            pr = bs.PatientRecord(self._get('First Name'), self._get('Last Name'))
-            pr.insert_measurement(
-                self._get('LOINC Code'),
-                self._get('Value'),
-                self._get('Unit'),
-                self._get('Valid Start Time'),
-                self._get('Transaction Time')
-            )
+            required_fields = [
+                'Patient ID', 'First Name', 'Last Name',
+                'LOINC Code', 'Value', 'Unit',
+                'Valid Start Time', 'Transaction Time'
+            ]
+            for field in required_fields:
+                value = self._get(field).strip()
+                if not value:
+                    mb.showerror("Error", f"The field '{field}' is required.")
+                    return
+
+            patient_id = self._get('Patient ID').strip()
+            first_name = self._get('First Name').strip()
+            last_name = self._get('Last Name').strip()
+            loinc_code = self._get('LOINC Code').strip()
+            value = self._get('Value').strip()
+            unit = self._get('Unit').strip()
+            valid_start = self._get('Valid Start Time').strip()
+            transaction_time = self._get('Transaction Time').strip()
+
+            # Run input validation
+            bs.validate_patient_id(patient_id)
+            bs.validate_name(first_name, "First Name")
+            bs.validate_name(last_name, "Last Name")
+            #bs.validate_loinc(loinc_code, bs.data)
+            bs.validate_datetime(valid_start, "Valid Start Time")
+            bs.validate_datetime(transaction_time, "Transaction Time")
+
+            # Check if patient exists
+            pr = bs.PatientRecord(patient_id, first_name, last_name)
+            exists = pr.check_patient()
+            if not exists:
+                mb.showerror("Error", f"Patient with ID {pr.patient_id} is not registered. Please register first.")
+                return
+
+            # Insert measurement
+            pr.insert_measurement(loinc_code, value, unit, valid_start, transaction_time)
             mb.showinfo("Success", "Measurement inserted successfully!")
+
         except bs.PatientNotFound:
             mb.showerror("Error", "Patient not found.")
+        except ValueError as ve:
+            mb.showerror("Input Error", str(ve))
         except Exception as ex:
             mb.showerror("Error", f"Unexpected error: {ex}")
 
@@ -127,7 +224,11 @@ class CDSSApp(tk.Tk):
         try:
             first = self._get('First Name')
             last = self._get('Last Name')
-            history = bs.PatientRecord.search_history(first, last)
+            history = bs.PatientRecord.search_history(
+                self._get('Patient ID').strip(),
+                self._get('First Name'),
+                self._get('Last Name')
+            )
 
             self.listbox.delete(0, tk.END)
             if not history:
@@ -161,6 +262,7 @@ class CDSSApp(tk.Tk):
     def update_measurement(self):
         try:
             bs.PatientRecord.update_measurement(
+                self._get('Patient ID'),
                 self._get('First Name'),
                 self._get('Last Name'),
                 self._get('LOINC Code'),
@@ -175,7 +277,7 @@ class CDSSApp(tk.Tk):
         except Exception as ex:
             mb.showerror("Error", f"Unexpected error: {ex}")
 
-    def delete_measurement(self):
+    def delete_measurement(self): #will need to add id as well
         try:
             bs.PatientRecord.delete_measurement(
                 self._get('First Name'),

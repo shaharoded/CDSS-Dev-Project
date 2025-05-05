@@ -68,22 +68,28 @@ class DataAccess:
         return bool(result)
 
     def _load_patients_from_excel(self):
-        """
-        Load patients from an Excel file and insert them into the Patients table.
-        """
         df = pd.read_excel(PATIENTS_FILE)
 
         if df.empty:
             print('[Info]: No patients data found to load.')
             return
 
+        # Deduplicate patients
+        unique_patients = df[['PatientId', 'First name', 'Last name']].drop_duplicates()
+
+        # Insert unique patients
+        for _, row in unique_patients.iterrows():
+            self._execute_query(
+                INSERT_PARIENT_QUERY,
+                (row['First name'], row['Last name'], row['PatientId'])
+            )
+
+        # Insert measurements
         for _, row in df.iterrows():
-            self._execute_query(INSERT_PARIENT_QUERY, (row['First name'], row['Last name']))
-            patient_id = self._fetch_records(CHECK_PATIENT_QUERY, (row['First name'], row['Last name']))[0][0]
             self._execute_query(
                 INSERT_MEASUREMENT_QUERY,
                 (
-                    patient_id,
+                    row['PatientId'],
                     row['LOINC-NUM'],
                     row['Value'],
                     row['Unit'],
@@ -92,7 +98,8 @@ class DataAccess:
                 )
             )
 
-        print(f'[Info]: Loaded {len(df)} records from Excel file to DB tables.')
+        print(
+            f'[Info]: Loaded {len(df)} measurement records and {len(unique_patients)} unique patients from Excel file to DB tables.')
 
     def _load_loinc_from_zip(self):
         """

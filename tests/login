@@ -1,0 +1,27 @@
+   """print("Running local tests...")
+
+    # Try fetching history for an existing patient
+    name = "Gus"
+    last_name = "McRae"
+    id = "456789015"
+    result = PatientRecord.search_history(id, name, last_name)
+    print(f"History for {name} {last_name}:")
+    for row in result:
+        print(row)
+    # --- Test: Update Measurement ---
+    loinc_num = "20252-3"  # ← replace with an actual LOINC-NUM from your data
+    valid_start_time = "2018-05-20 07:00:00"  # ← replace with the actual timestamp from your data
+    new_value = "555"  # or any test value you want to set
+
+    # Run the update
+    try:
+        PatientRecord.update_measurement(id, name, last_name, loinc_num, valid_start_time, new_value)
+        print(f"Updated measurement {loinc_num} at {valid_start_time} to {new_value}")
+    except Exception as e:
+        print(f"Update failed: {e}")
+
+    # --- Re-check history to verify update ---
+    result = PatientRecord.search_history(id, name, last_name)
+    print(f"Updated history for {name} {last_name}:")
+    for row in result:
+        print(row)"""
