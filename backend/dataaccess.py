@@ -73,6 +73,12 @@ class DataAccess:
         if df.empty:
             print('[Info]: No patients data found to load.')
             return
+        
+        # Convert datetime columns to ISO 8601 format: 'YYYY-MM-DD HH:MM:SS'
+        # Drop rows where datetime conversion failed
+        for col in ['Valid start time', 'Transaction time']:
+            df[col] = pd.to_datetime(df[col], errors='coerce', dayfirst=True).dt.strftime('%Y-%m-%d %H:%M:%S')
+        df.dropna(subset=['Valid start time', 'Transaction time'], inplace=True)
 
         # Deduplicate patients
         unique_patients = df[['PatientId', 'First name', 'Last name']].drop_duplicates()
@@ -80,7 +86,7 @@ class DataAccess:
         # Insert unique patients
         for _, row in unique_patients.iterrows():
             self._execute_query(
-                INSERT_PARIENT_QUERY,
+                INSERT_PATIENT_QUERY,
                 (row['First name'], row['Last name'], row['PatientId'])
             )
 
