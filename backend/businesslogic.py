@@ -6,6 +6,7 @@ SQL queries and data access functions.
 
 All SQL queries are saved separately under /queries/
 """
+import pandas as pd
 
 # Local Code
 from backend.dataaccess import DataAccess
@@ -37,56 +38,75 @@ class PatientRecord:
         Returns the list of matching patients by their names.
         """
         # Check if Patient Name exists (without name check)
-        matches = data._fetch_records(CHECK_PATIENT_BY_NAME_QUERY, (first_name, last_name))
+        matches = data.fetch_records(CHECK_PATIENT_BY_NAME_QUERY, (first_name, last_name))
         if not matches:
            raise PatientNotFound("Patient not found")
          
         return matches  # Return ID, First Name, Last Name from DB for every matching patient by name
 
     @staticmethod
-    def search_history(patient_id, loinc_num=None, date_range=None, time_range=None):
+    def search_history(patient_id, snapshot_date=None, loinc_num=None, start=None, end=None):
         """
-        Search patient measurement history.
+        Search patient measurement history using optional filters:
+        - snapshot_date: point-in-time view of the database.
+        - loinc_num: filter by LOINC code.
+        - start/end: define a datetime window (inclusive).
+        Accepts both date and datetime; if only date is given, assumes 00:00 for start and 23:59 for end.
 
-        - Use CHECK_PATIENT_QUERY to fetch patient_id.
-        - Dynamically build WHERE clause based on filters.
-        - Execute SEARCH_HISTORY_QUERY.
-        - Return the results.
-
-        NOTE: Query file is preforming a Join operation to fetch the LOINC concept name from LOINC table.
-
-        NOTE: Index is not an id
+        NOTE: SEARCH_HISTORY_QUERY performs a JOIN with the LOINC table.
         """
 
         # Fetch patient_id
         if not data.check_patient_by_id(patient_id):
             raise PatientNotFound("Patient not found")
 
-        # Build dynamic filters
-        filters = []
+        # Initialize dynamic filters
+        filters = ["m.PatientId = ?"]
         params = [patient_id]
 
         if loinc_num:
-            filters.append("LoincNum = ?")
+            filters.append("m.LoincNum = ?")
             params.append(loinc_num)
 
-        if date_range:
-            filters.append("DATE(ValidStartTime) BETWEEN ? AND ?")
-            params.extend(date_range)
+        # Handle datetime range
+        if start:
+            start_dt = pd.to_datetime(start, dayfirst=True)
+            if start_dt.time() == pd.Timestamp.min.time():  # no time provided
+                start_iso = start_dt.replace(hour=0, minute=0, second=0)
+            else:
+                start_iso = start_dt
+            filters.append("m.ValidStartTime >= ?")
+            params.append(start_iso.strftime('%Y-%m-%d %H:%M:%S'))
 
-        if time_range:
-            filters.append("TIME(ValidStartTime) BETWEEN ? AND ?")
-            params.extend(time_range)
+        if end:
+            end_dt = pd.to_datetime(end, dayfirst=True)
+            if end_dt.time() == pd.Timestamp.min.time():  # no time provided
+                end_iso = end_dt.replace(hour=23, minute=59, second=59)
+            else:
+                end_iso = end_dt
+            filters.append("m.ValidStartTime <= ?")
+            params.append(end_iso.strftime('%Y-%m-%d %H:%M:%S'))
 
-        where_clause = " AND ".join(filters) if filters else "1=1"
+        # Snapshot logic
+        if snapshot_date:
+            # Convert to ISO format
+            snapshot_iso = pd.to_datetime(snapshot_date, dayfirst=True).strftime('%Y-%m-%d %H:%M:%S')
+            filters.append("m.TransactionInsertionTime <= ?")
+            filters.append("(m.TransactionDeletionTime IS NULL OR m.TransactionDeletionTime > ?)")
+            params.extend([snapshot_iso, snapshot_iso])
+        else:
+            # Default to currently active records
+            filters.append("(m.TransactionDeletionTime IS NULL OR m.TransactionDeletionTime > CURRENT_TIMESTAMP)")
 
-        # Read base query
+        where_clause = " AND ".join(filters)
+
+        # Read base query from file and insert where clause
         with open(SEARCH_HISTORY_QUERY, 'r') as f:
             base_query = f.read()
 
         final_query = base_query.replace("{where_clause}", where_clause)
 
-        result = data._fetch_records(final_query, params)
+        result = data.fetch_records(final_query, params)
         return result
     
     def register_patient(self):
@@ -94,7 +114,7 @@ class PatientRecord:
         Inserts a patient to the DB.
         """
         # Insert new patient
-        data._execute_query(INSERT_PATIENT_QUERY, (self.first_name, self.last_name, self.patient_id))
+        data.execute_query(INSERT_PATIENT_QUERY, (self.first_name, self.last_name, self.patient_id))
         # # DEBUG: Check if patient was inserted
         # print("[DEBUG]: Patients in DB:", data.cur.execute("SELECT * FROM Patients").fetchall())
 
@@ -106,18 +126,18 @@ class PatientRecord:
         - Insert measurement using INSERT_MEASUREMENT_QUERY.
         - Raise PatientNotFound if not exists.
         """
-        patient = data._fetch_records(CHECK_PATIENT_BY_ID_QUERY, (self.patient_id,))
+        patient = data.fetch_records(CHECK_PATIENT_BY_ID_QUERY, (self.patient_id,))
         if not patient:
             raise PatientNotFound("Patient not found")
 
             # Insert measurement
-        data._execute_query(
+        data.execute_query(
             INSERT_MEASUREMENT_QUERY,
             (self.patient_id, loinc_num, value, unit, valid_start_time, transaction_time)
         )
 
     @staticmethod
-    def update_measurement(patient_id, first_name, last_name, loinc_num, valid_start_time, new_value):
+    def update_measurement(patient_id, loinc_num, valid_start_time, new_value):
         """
         Update an existing measurement value.
 
@@ -126,11 +146,9 @@ class PatientRecord:
         - Handle edge cases: no matching record.
         """
         # Verify patient exists
-        patient = data._fetch_records(CHECK_PATIENT_QUERY, (patient_id, first_name, last_name))
+        patient = data.check_patient_by_id(patient_id)
         if not patient:
             raise PatientNotFound("Patient not found")
-
-        print(f"this is the id {patient_id}")
 
         # Check if measurement exists (move this SELECT query to a .sql file if you want full consistency)
         measurement_check_query = """
@@ -145,8 +163,8 @@ class PatientRecord:
         if not exists:
             raise Exception("Measurement not found to update.")
 
-        # Update the measurement value using _execute_query
-        data._execute_query(
+        # Update the measurement value using execute_query
+        data.execute_query(
             UPDATE_MEASUREMENT_QUERY,
             (new_value, patient_id, loinc_num, valid_start_time)
         )
@@ -175,7 +193,7 @@ def validate_name(name, field_name):
         raise ValueError(f"{field_name} must contain alphabetic characters only.")
 
 def validate_loinc(loinc_code, data_access):
-    result = data._fetch_records(CHECK_LOINC_QUERY, (loinc_code,))
+    result = data.fetch_records(CHECK_LOINC_QUERY, (loinc_code,))
     if not result:
         raise ValueError(f"LOINC code '{loinc_code}' does not exist in the LOINC table.")
 
