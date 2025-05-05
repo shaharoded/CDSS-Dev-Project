@@ -131,63 +131,92 @@ class CDSSApp(tk.Tk):
 
     def register_patient(self):
         try:
+            # Check that required fields are filled and not just placeholders
             required_fields = ['Patient ID', 'First Name', 'Last Name']
             for field in required_fields:
-                value = self._get(field)
-                placeholder = f"e.g., {field.split()[0]}"  # matches your placeholders
+                value = self._get(field).strip()
+                placeholder = f"e.g., {field.split()[0]}"
                 if not value or value.startswith("e.g.,"):
                     mb.showerror("Error", f"The field '{field}' is required.")
                     return
 
-            patient_id = self._get('Patient ID')
-            first_name = self._get('First Name')
-            last_name = self._get('Last Name')
+            patient_id = self._get('Patient ID').strip()
+            first_name = self._get('First Name').strip()
+            last_name = self._get('Last Name').strip()
 
+            from backend.businesslogic import validate_patient_id, validate_name, validate_loinc, validate_datetime
+            bs.validate_patient_id(patient_id)
+            bs.validate_name(first_name, "First Name")
+            bs.validate_name(last_name, "Last Name")
+
+            # Check if patient already exists
             pr = bs.PatientRecord(patient_id, first_name, last_name)
-            exists = pr.check_patient()
+            exists = pr.check_patient_by_id_only()
 
             if exists:
                 db_first, db_last = exists
                 if db_first != first_name or db_last != last_name:
                     mb.showerror("Error",
-                                 f"ID {patient_id} already exists under a different name: {db_first} {db_last}")
+                                 f"Patient ID {patient_id} already exists under a different name: {db_first} {db_last}.")
                     return
                 else:
                     mb.showinfo("Info", f"Patient with ID {patient_id} is already registered.")
                     return
 
+            # Register new patient
             pr.register_patient()
             mb.showinfo("Success", "Patient registered successfully!")
 
+        except ValueError as ve:
+            mb.showerror("Input Error", str(ve))
         except Exception as ex:
             mb.showerror("Error", f"Unexpected error: {ex}")
 
     def insert_measurement(self):
         try:
-            required_fields = ['Patient ID', 'First Name', 'Last Name', 'LOINC Code', 'Value', 'Unit',
-                               'Valid Start Time', 'Transaction Time']
+            required_fields = [
+                'Patient ID', 'First Name', 'Last Name',
+                'LOINC Code', 'Value', 'Unit',
+                'Valid Start Time', 'Transaction Time'
+            ]
             for field in required_fields:
-                if not self._get(field):
+                value = self._get(field).strip()
+                if not value:
                     mb.showerror("Error", f"The field '{field}' is required.")
                     return
 
-            pr = bs.PatientRecord(self._get('Patient ID'), self._get('First Name'), self._get('Last Name'))
+            patient_id = self._get('Patient ID').strip()
+            first_name = self._get('First Name').strip()
+            last_name = self._get('Last Name').strip()
+            loinc_code = self._get('LOINC Code').strip()
+            value = self._get('Value').strip()
+            unit = self._get('Unit').strip()
+            valid_start = self._get('Valid Start Time').strip()
+            transaction_time = self._get('Transaction Time').strip()
+
+            # Run input validation
+            bs.validate_patient_id(patient_id)
+            bs.validate_name(first_name, "First Name")
+            bs.validate_name(last_name, "Last Name")
+            #bs.validate_loinc(loinc_code, bs.data)
+            bs.validate_datetime(valid_start, "Valid Start Time")
+            bs.validate_datetime(transaction_time, "Transaction Time")
+
+            # Check if patient exists
+            pr = bs.PatientRecord(patient_id, first_name, last_name)
             exists = pr.check_patient()
             if not exists:
                 mb.showerror("Error", f"Patient with ID {pr.patient_id} is not registered. Please register first.")
                 return
 
-            pr.insert_measurement(
-                self._get('LOINC Code'),
-                self._get('Value'),
-                self._get('Unit'),
-                self._get('Valid Start Time'),
-                self._get('Transaction Time')
-            )
+            # Insert measurement
+            pr.insert_measurement(loinc_code, value, unit, valid_start, transaction_time)
             mb.showinfo("Success", "Measurement inserted successfully!")
 
         except bs.PatientNotFound:
             mb.showerror("Error", "Patient not found.")
+        except ValueError as ve:
+            mb.showerror("Input Error", str(ve))
         except Exception as ex:
             mb.showerror("Error", f"Unexpected error: {ex}")
 
