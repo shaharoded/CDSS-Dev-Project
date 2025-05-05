@@ -32,6 +32,13 @@ def validate_datetime(dt_string):
     except Exception:
             raise ValueError(f"Invalid date input: '{dt_string}' could not be parsed as a date or datetime.")
 
+def validate_dates_relation(early_date, later_date, early_field_name, later_field_name):
+    if early_date and later_date:
+        early_dt = validate_datetime(early_date)
+        later_dt = validate_datetime(later_date)
+        if later_dt < early_dt:
+            raise ValueError(f"{later_field_name} cannot be earlier than {early_field_name}.")
+
 # ------------------ Class Exceptions ------------------
 class PatientNotFound(Exception):
     """Raised when patient is not found in DB."""
@@ -81,9 +88,11 @@ class PatientRecord:
         NOTE: SEARCH_HISTORY_QUERY performs a JOIN with the LOINC table.
         """
 
-        # Check patient_id
+        # Input Validation
         if not data.check_patient(patient_id):
             raise PatientNotFound("Patient not found")
+        validate_dates_relation(start, end, 'Start Date', 'End Date')
+        validate_dates_relation(end, snapshot_date, 'End Date', 'Snapshot Date')
 
         # Initialize dynamic filters
         filters = ["m.PatientId = ?"]
@@ -165,6 +174,7 @@ class PatientRecord:
             raise LoincCodeNotFound("Loinc code not found")
         valid_start_time = validate_datetime(valid_start_time).strftime('%Y-%m-%d %H:%M:%S')
         transaction_time = validate_datetime(transaction_time).strftime('%Y-%m-%d %H:%M:%S')
+        validate_dates_relation(valid_start_time, transaction_time, 'Valid Start Date', 'Transaction Insertion Time')
 
         # In case transaction_time is not the most updated TransactionInsertionTime for this record, get the TransactionDeletionDate for it
         # deletion_date can be None
@@ -179,7 +189,7 @@ class PatientRecord:
         )
 
     @staticmethod
-    def update_measurement(patient_id, loinc_num, valid_start_time, new_value):
+    def update_measurement(patient_id, loinc_num, valid_start_time, transaction_time, new_value):
         """
         Update an existing measurement value.
 
@@ -193,6 +203,8 @@ class PatientRecord:
         if not data.check_loinc(loinc_num):
             raise LoincCodeNotFound("Loinc code not found")
         valid_start_time = validate_datetime(valid_start_time).strftime('%Y-%m-%d %H:%M:%S')
+        transaction_time = validate_datetime(transaction_time).strftime('%Y-%m-%d %H:%M:%S')
+        validate_dates_relation(valid_start_time, transaction_time, 'Valid Start Date', 'Transaction Insertion Time')
         if not data.check_record(patient_id, loinc_num, valid_start_time):
             raise RecordNotFound("This record was not found in the DB")
 
