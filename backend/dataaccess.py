@@ -22,14 +22,105 @@ class DataAccess:
         self.conn = sqlite3.connect(db_path)
         self.cur = self.conn.cursor()
 
-        if not self._check_tables_exist():
-            self._execute_script(INITIATE_PATIENTS_TABLE_DDL)
-            self._execute_script(INITIATE_LOINC_TABLE_DDL)
-            self._load_patients_from_excel()
-            self._load_loinc_from_zip()
-            self._print_db_info()
+        if not self.__check_tables_exist():
+            self.__execute_script(INITIATE_PATIENTS_TABLE_DDL)
+            self.__execute_script(INITIATE_LOINC_TABLE_DDL)
+            self.__load_patients_from_excel()
+            self.__load_loinc_from_zip()
+            self.__print_db_info()
 
-    def _execute_script(self, script_path):
+    def check_patient(self, patient_id):
+        """
+        Returns True if the given PatientId exists in the database.
+        """
+        result = self.fetch_records(CHECK_PATIENT_BY_ID_QUERY, (patient_id,))
+        return bool(result)
+    
+    def check_loinc(self, loinc_code):
+        """
+        Returns True if the given Loinc-code exists in the database.
+        """
+        result = self.fetch_records(CHECK_LOINC_QUERY, (loinc_code,))
+        return bool(result)
+    
+    def check_record(self, patient_id, loinc_code, valid_start_time, transaction_time):
+        """
+        Returns True if the given record exists in this snapshot of the database (described by transaction_time).
+        """
+        result = self.fetch_records(CHECK_RECORD_QUERY, (patient_id, loinc_code, valid_start_time, transaction_time))
+        return bool(result)
+
+    def update_old_records_deletion_time(self, patient_id, loinc_num, valid_start_time, transaction_time):
+        """
+        Update the TransactionDeletionTime of all older records.
+        """
+        self.execute_query(
+            UPDATE_OLD_RECORDS_QUERY,
+            (transaction_time, patient_id, loinc_num, valid_start_time, transaction_time, transaction_time)
+        )
+
+    def get_existing_unit(self, patient_id, loinc_code, valid_start_time):
+        """
+        Fetch the unit from the latest existing record using the SQL file.
+        """
+        result = self.fetch_records(GET_EXISTING_UNIT_QUERY, (patient_id, loinc_code, valid_start_time))
+        return result[0][0] if result else None
+
+    def check_loinc_component_match(self, loinc_code, component):
+        """
+        Check if the given LOINC code and component match in the database.
+        Returns True if match exists, False otherwise.
+        """
+        result = self.fetch_records(CHECK_LOINC_COMPONENT_MATCH_QUERY, (loinc_code, component))
+        return bool(result)
+
+    def get_loinc_by_component(self, component):
+        """
+        Get the LOINC code associated with the given component name.
+        Returns the LOINC code string if found, or None if not found.
+        """
+        result = self.fetch_records(GET_LOINC_BY_COMPONENT_QUERY, (component,))
+        return result[0][0] if result else None
+
+    def get_future_record_time(self, patient_id, loinc_code, valid_start_time, transaction_time):
+        """
+        Returns the next TransactionInsertionTime after the one you're inserting,
+        for the same (PatientId, LoincNum, ValidStartTime).
+        Used to set the TransactionDeletionTime for the new backfilled record.
+        Returns a string (ISO datetime) or None.
+        """
+        result = self.fetch_records(CHECK_FUTURE_RECORD_QUERY, (patient_id, loinc_code, valid_start_time, transaction_time))
+        return result[0][0] if result else None
+    
+    def execute_query(self, query_or_path, params):
+        """
+        Executes an INSERT/UPDATE/DELETE query.
+        Accepts either a path to a .sql file or a raw SQL string.
+        """
+        if os.path.isfile(query_or_path):
+            with open(query_or_path, 'r') as file:
+                query = file.read()
+        else:
+            query = query_or_path  # assume raw SQL
+
+        self.cur.execute(query, params)
+        self.conn.commit()
+    
+    def fetch_records(self, query_or_path, params):
+        """
+        Executes a SELECT query.
+        Accepts either a path to a .sql file or a raw SQL string.
+        Returns all rows.
+        """
+        if os.path.isfile(query_or_path):
+            with open(query_or_path, 'r') as file:
+                query = file.read()
+        else:
+            query = query_or_path  # assume raw SQL
+
+        return self.cur.execute(query, params).fetchall()
+    
+    def __execute_script(self, script_path):
         """
         Execute a DDL script from a file.
         Used to initialize tables in the DB.
@@ -39,54 +130,39 @@ class DataAccess:
         self.cur.executescript(script)
         self.conn.commit()
 
-    def _execute_query(self, query_path, params):
-        """
-        Execute a query with parameters from a file.
-        Query execution -> INSERT, UPDATE, DELETE queries.
-        Used to load data to initialized tables in the DB.
-        """
-        with open(query_path, 'r') as file:
-            query = file.read()
-        self.cur.execute(query, params)
-        self.conn.commit()
-    
-    def _fetch_records(self, query_path, params):
-        """
-        Returning records from a query with parameters from a file.
-        Query fetched -> SELECT queries.
-        Used to return data from filled tables in the DB.
-        """
-        with open(query_path, 'r') as file:
-            query = file.read()
-        return self.cur.execute(query, params).fetchall()
-
-    def _check_tables_exist(self):
+    def __check_tables_exist(self):
         """
         Ensuring DB was initialized
         """
-        result = self._fetch_records(CHECK_TABLE_EXISTS_QUERY, ())
+        result = self.fetch_records(CHECK_TABLE_EXISTS_QUERY, ())
         return bool(result)
 
-    def _load_patients_from_excel(self):
+    def __load_patients_from_excel(self):
         df = pd.read_excel(PATIENTS_FILE)
 
         if df.empty:
             print('[Info]: No patients data found to load.')
             return
+        
+        # Convert datetime columns to ISO 8601 format: 'YYYY-MM-DD HH:MM:SS'
+        # Drop rows where datetime conversion failed
+        for col in ['Valid start time', 'Transaction time']:
+            df[col] = pd.to_datetime(df[col], errors='coerce', dayfirst=True).dt.strftime('%Y-%m-%d %H:%M:%S')
+        df.dropna(subset=['Valid start time', 'Transaction time'], inplace=True)
 
         # Deduplicate patients
         unique_patients = df[['PatientId', 'First name', 'Last name']].drop_duplicates()
 
         # Insert unique patients
         for _, row in unique_patients.iterrows():
-            self._execute_query(
-                INSERT_PARIENT_QUERY,
+            self.execute_query(
+                INSERT_PATIENT_QUERY,
                 (row['First name'], row['Last name'], row['PatientId'])
             )
 
         # Insert measurements
         for _, row in df.iterrows():
-            self._execute_query(
+            self.execute_query(
                 INSERT_MEASUREMENT_QUERY,
                 (
                     row['PatientId'],
@@ -101,7 +177,7 @@ class DataAccess:
         print(
             f'[Info]: Loaded {len(df)} measurement records and {len(unique_patients)} unique patients from Excel file to DB tables.')
 
-    def _load_loinc_from_zip(self):
+    def __load_loinc_from_zip(self):
         """
         Load LOINC codes from a ZIP file and insert them into the Loinc table in the DB for future use.
         """
@@ -121,7 +197,7 @@ class DataAccess:
             print('[Info]: No LOINC codes found to load.')
         else:
             for _, row in df.iterrows():
-                self._execute_query(
+                self.execute_query(
                     INSET_LOINC_CODE_QUERY,
                     (row['LOINC_NUM'], row['COMPONENT'], row['PROPERTY'], row['TIME_ASPCT'],
                     row['SYSTEM'], row['SCALE_TYP'], row['METHOD_TYP'])
@@ -130,20 +206,19 @@ class DataAccess:
 
         shutil.rmtree(extract_path)
         
-    def _print_db_info(self):
+    def __print_db_info(self):
         """
-        Printing DB information, including the total number of tables created and the number of rows in each table.
+        Printing DB information, including the total number of tables created
+        and the number of rows in each table.
         """
         print("[Info]: DB initiated successfully!")
-        
-        tables = self.cur.execute(
-            "SELECT name FROM sqlite_master WHERE type='table';"
-        ).fetchall()
+
+        tables = self.fetch_records("SELECT name FROM sqlite_master WHERE type='table';", ())
 
         print(f"[Info]: Total tables created: {len(tables)}")
 
         for (table_name,) in tables:
-            count = self.cur.execute(f"SELECT COUNT(*) FROM {table_name};").fetchone()[0]
+            count = self.fetch_records(f"SELECT COUNT(*) FROM {table_name};", ())[0][0]
             print(f"[Info]: Table '{table_name}' - Rows: {count}")
 
 if __name__ == '__main__':

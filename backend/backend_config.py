@@ -19,10 +19,19 @@ INSET_LOINC_CODE_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'inser
 
 
 # SQL Queries
-CHECK_PATIENT_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_patient.sql')
-CHECK_LOINC_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_lonic.sql')
+CHECK_PATIENT_BY_NAME_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_patient_by_name.sql')
 CHECK_PATIENT_BY_ID_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_patient_by_id.sql')
+CHECK_LOINC_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_lonic.sql')
+CHECK_RECORD_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_record.sql')
+CHECK_FUTURE_RECORD_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_future_record.sql')
 CHECK_TABLE_EXISTS_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_table_exists.sql')
+CHECK_LOINC_COMPONENT_MATCH_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_loinc_component_match.sql')
 SEARCH_HISTORY_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_history.sql')
 UPDATE_MEASUREMENT_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'update_measurement.sql')
+UPDATE_OLD_RECORDS_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'update_old_records.sql')
+GET_EXISTING_UNIT_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_existing_unit.sql')
+GET_LOINC_BY_COMPONENT_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_loinc_by_component.sql')
+
+
+
 
