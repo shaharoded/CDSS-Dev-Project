@@ -73,8 +73,8 @@ class Application(tk.Tk):
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Get Patient by Name")
 
-        self.get_first_name = self._add_labeled_entry(tab, "First Name", "Enter patient's first name\ne.g. John")
-        self.get_last_name = self._add_labeled_entry(tab, "Last Name", "Enter patient's last name\ne.g. Doe")
+        self.get_first_name = self._add_labeled_entry(tab, "First Name", "• A patient's first name\n• e.g. John")
+        self.get_last_name = self._add_labeled_entry(tab, "Last Name", "• A patient's last name\n• e.g. Doe")
 
         tk.Button(tab, text="Get Patient", command=self.get_patient_by_name).pack(pady=10)
         self.get_result = tk.Text(tab, height=10)
@@ -99,7 +99,7 @@ class Application(tk.Tk):
         self.notebook.add(tab, text="Insert Measurement")
 
         self.update_pid = self._add_labeled_entry(tab, "Patient ID", "• A 9 digit number\n• e.g. 208399845")
-        self.update_loinc = self._add_labeled_entry(tab, "LOINC Code", "• A valid LOINC code\ne.g. 2055-2")
+        self.update_loinc = self._add_labeled_entry(tab, "LOINC Code", "• A valid LOINC code\n• e.g. 2055-2")
         self.update_time = self._add_labeled_entry(tab, "Valid Start Time", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024")
         self.update_value = self._add_labeled_entry(tab, "New Value", "• Numeric or textual value\n• e.g. 12.5")
         self.update_transaction_time = self._add_labeled_entry(tab, "Transaction Time (Optional)", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024\n• Allows to create retro updates, as if created in past time\n• If empty, will automatically use current date-time")
