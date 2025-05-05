@@ -115,19 +115,16 @@ class PatientRecord:
 
         # Handle datetime range
         if start:
-            start_dt = validate_datetime(start)
-            if start_dt.time() == pd.Timestamp.min.time():  # no time provided
-                start_iso = start_dt.replace(hour=0, minute=0, second=0)
-            else:
-                start_iso = start_dt
+            start_iso = validate_datetime(start) # 00:00:00 if no time, actual time if present
             filters.append("m.ValidStartTime >= ?")
             params.append(start_iso.strftime('%Y-%m-%d %H:%M:%S'))
 
         if end:
-            end_dt = validate_datetime(end)
-            if end_dt.time() == pd.Timestamp.min.time():  # no time provided
+            if len(end.strip()) <= 10:  # format like 'YYYY-MM-DD' -> No time
+                end_dt = validate_datetime(end)
                 end_iso = end_dt.replace(hour=23, minute=59, second=59)
             else:
+                end_dt = validate_datetime(end)
                 end_iso = end_dt
             filters.append("m.ValidStartTime <= ?")
             params.append(end_iso.strftime('%Y-%m-%d %H:%M:%S'))
@@ -247,7 +244,7 @@ class PatientRecord:
         )
 
     @staticmethod
-    def delete_measurement(patient_id, loinc_num, valid_start_time):
+    def delete_measurement(patient_id, loinc_num, valid_start_time, deletion_time=None):
         """
         Delete a specific measurement.
 
@@ -259,6 +256,7 @@ class PatientRecord:
         patient_id = str(patient_id).strip()
         loinc_num = str(loinc_num).strip()
         valid_start_time = str(valid_start_time).strip()
+        deletion_time = str(valid_start_time).strip() if deletion_time else deletion_time
         
         # Verify input
         if not data.check_patient(patient_id):
