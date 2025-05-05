@@ -43,12 +43,22 @@ class DataAccess:
         result = self.fetch_records(CHECK_LOINC_QUERY, (loinc_code,))
         return bool(result)
     
-    def check_record(self, patient_id, loinc_code, valid_start_time):
+    def check_record(self, patient_id, loinc_code, valid_start_time, transaction_time):
         """
-        Returns True if the given Loinc-code exists in the database.
+        Returns True if the given record exists in this snapshot of the database (described by transaction_time).
         """
-        result = self.fetch_records(CHECK_RECORD_QUERY, (patient_id, loinc_code, valid_start_time))
+        result = self.fetch_records(CHECK_RECORD_QUERY, (patient_id, loinc_code, valid_start_time, transaction_time))
         return bool(result)
+    
+    def get_future_record_time(self, patient_id, loinc_code, valid_start_time, transaction_time):
+        """
+        Returns the next TransactionInsertionTime after the one you're inserting,
+        for the same (PatientId, LoincNum, ValidStartTime).
+        Used to set the TransactionDeletionTime for the new backfilled record.
+        Returns a string (ISO datetime) or None.
+        """
+        result = self.fetch_records(CHECK_FUTURE_RECORD_QUERY, (patient_id, loinc_code, valid_start_time, transaction_time))
+        return result[0][0] if result else None
     
     def execute_query(self, query_or_path, params):
         """

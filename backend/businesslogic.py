@@ -156,6 +156,7 @@ class PatientRecord:
         - Using existing validation methods before inserting the new record.
         - Insert measurement using INSERT_MEASUREMENT_QUERY.
         - Raise PatientNotFound and LoincCodeNotFound if not exists, or ValueError is the dates are not in a parseable format
+        - Will not allow user to insert an unupdated version of an existing record into the system.
         """
         # Validations
         if not data.check_patient(patient_id):
@@ -164,6 +165,12 @@ class PatientRecord:
             raise LoincCodeNotFound("Loinc code not found")
         valid_start_time = validate_datetime(valid_start_time).strftime('%Y-%m-%d %H:%M:%S')
         transaction_time = validate_datetime(transaction_time).strftime('%Y-%m-%d %H:%M:%S')
+
+        # In case transaction_time is not the most updated TransactionInsertionTime for this record, get the TransactionDeletionDate for it
+        # deletion_date can be None
+        future_record_date = data.get_future_record_time(patient_id, loinc_num, valid_start_time, transaction_time)
+        if future_record_date:
+            raise ValueError(f"This record has a newer update from {future_record_date} and cannot be updated to an unupdated version.")
 
         # Insert measurement
         data.execute_query(
