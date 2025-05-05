@@ -125,7 +125,7 @@ class DataAccess:
         for _, row in unique_patients.iterrows():
             self.execute_query(
                 INSERT_PATIENT_QUERY,
-                (row['First name'], row['Last name'], row['PatientId'])
+                (row['PatientId'], row['First name'], row['Last name'])
             )
 
         # Insert measurements

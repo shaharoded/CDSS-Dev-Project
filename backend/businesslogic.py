@@ -237,19 +237,27 @@ class PatientRecord:
     
 
 if __name__ == "__main__":
+    import sys
+
     print("🔍 Running business logic tests...")
 
     record = PatientRecord()
 
     try:
+        first_name, last_name = "Eyal", "Rothman"
         print("\n🧪 Test 1: Get patient by name (should succeed)...")
-        result = record.get_patient_by_name("John", "Doe")
+        result = record.get_patient_by_name(first_name, last_name)
         for r in result:
             print(f"✅ Found: ID={r[0]}, FirstName={r[1]}, LastName={r[2]}")
-    except PatientNotFound as e:
-        print(f"❌ Patient not found: {e}")
     except Exception as e:
-        print(f"⚠️ Unexpected error: {e}")
+        print(f"❌ Test 1 failed: {e}")
+        print("Testing raw fetch...")
+        rows = data.fetch_records(CHECK_PATIENT_BY_NAME_QUERY, (first_name, last_name))
+        print("Result from DB:", rows)
+        if not rows:
+            rows = data.fetch_records('SELECT * FROM Patients', ())
+            print("All patients from DB:", rows)
+        sys.exit(1)
 
     try:
         print("\n🧪 Test 2: Search history with snapshot and range...")
@@ -263,14 +271,16 @@ if __name__ == "__main__":
         for row in history:
             print("   ", row)
     except Exception as e:
-        print(f"❌ Search failed: {e}")
+        print(f"❌ Test 2 failed: {e}")
+        sys.exit(1)
 
     try:
         print("\n🧪 Test 3: Register a new patient (should succeed or fail if already exists)...")
         record.register_patient("123456789", "Alice", "Smith")
         print("✅ Registered patient successfully")
     except Exception as e:
-        print(f"⚠️ Could not register: {e}")
+        print(f"❌ Test 3 failed: {e}")
+        sys.exit(1)
 
     try:
         print("\n🧪 Test 4: Insert measurement (should validate and insert)...")
@@ -284,5 +294,8 @@ if __name__ == "__main__":
         )
         print("✅ Inserted measurement")
     except Exception as e:
-        print(f"❌ Insert failed: {e}")
+        print(f"❌ Test 4 failed: {e}")
+        sys.exit(1)
+
+    print("\n✅ All tests completed successfully!")
 
