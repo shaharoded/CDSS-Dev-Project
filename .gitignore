@@ -2,6 +2,7 @@
 data/Loinc_2.80.zip
 cdss.db
 cdss.db-journal
+Mini-Project*
 
 # Ignore an entire folder
 venv/
