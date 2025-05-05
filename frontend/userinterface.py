@@ -164,7 +164,7 @@ class CDSSApp(tk.Tk):
                     return
 
             # Register new patient
-            pr.register_patient()
+            pr.register_patient(patient_id, first_name, last_name)
             mb.showinfo("Success", "Patient registered successfully!")
 
         except ValueError as ve:
@@ -210,7 +210,7 @@ class CDSSApp(tk.Tk):
                 return
 
             # Insert measurement
-            pr.insert_measurement(loinc_code, value, unit, valid_start, transaction_time)
+            pr.insert_measurement(patient_id, loinc_code, value, unit, valid_start, transaction_time)
             mb.showinfo("Success", "Measurement inserted successfully!")
 
         except bs.PatientNotFound:

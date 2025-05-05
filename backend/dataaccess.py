@@ -29,11 +29,25 @@ class DataAccess:
             self.__load_loinc_from_zip()
             self.__print_db_info()
 
-    def check_patient_by_id(self, patient_id):
+    def check_patient(self, patient_id):
         """
         Returns True if the given PatientId exists in the database.
         """
         result = self.fetch_records(CHECK_PATIENT_BY_ID_QUERY, (patient_id,))
+        return bool(result)
+    
+    def check_loinc(self, loinc_code):
+        """
+        Returns True if the given Loinc-code exists in the database.
+        """
+        result = self.fetch_records(CHECK_LOINC_QUERY, (loinc_code,))
+        return bool(result)
+    
+    def check_record(self, patient_id, loinc_code, valid_start_time):
+        """
+        Returns True if the given Loinc-code exists in the database.
+        """
+        result = self.fetch_records(CHECK_RECORD_QUERY, (patient_id, loinc_code, valid_start_time))
         return bool(result)
     
     def execute_query(self, query_or_path, params):

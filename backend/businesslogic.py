@@ -11,15 +11,40 @@ import pandas as pd
 # Local Code
 from backend.dataaccess import DataAccess
 from backend.backend_config import *  # all query paths
-import re
-from datetime import datetime
 
 data = DataAccess()
 
+## ------------------ Validation Functions ------------------
+def validate_patient_id(patient_id):
+    if not patient_id.isdigit():
+        raise ValueError("Patient ID must contain digits only.")
+    if len(patient_id) != 9:
+        raise ValueError("Patient ID must be exactly 9 digits long.")
 
+def validate_name(name, field_name):
+    if not name.isalpha():
+        raise ValueError(f"{field_name} must contain alphabetic characters only.")
+
+def validate_datetime(dt_string):
+    try:
+        dt = pd.to_datetime(dt_string, dayfirst=True)
+        return dt
+    except Exception:
+            raise ValueError(f"Invalid date input: '{dt_string}' could not be parsed as a date or datetime.")
+
+# ------------------ Class Exceptions ------------------
 class PatientNotFound(Exception):
     """Raised when patient is not found in DB."""
     pass
+
+class LoincCodeNotFound(Exception):
+    """Raised when a Loinc code is not found in DB."""
+    pass
+
+class RecordNotFound(Exception):
+    """Raised when a measurement record for a patient is not found in DB."""
+    pass
+
 
 
 class PatientRecord:
@@ -33,7 +58,7 @@ class PatientRecord:
         self.last_name = last_name
     
     @staticmethod
-    def check_patient_by_name(first_name, last_name):
+    def get_patient_by_name(first_name, last_name):
         """
         Returns the list of matching patients by their names.
         """
@@ -56,8 +81,8 @@ class PatientRecord:
         NOTE: SEARCH_HISTORY_QUERY performs a JOIN with the LOINC table.
         """
 
-        # Fetch patient_id
-        if not data.check_patient_by_id(patient_id):
+        # Check patient_id
+        if not data.check_patient(patient_id):
             raise PatientNotFound("Patient not found")
 
         # Initialize dynamic filters
@@ -70,7 +95,7 @@ class PatientRecord:
 
         # Handle datetime range
         if start:
-            start_dt = pd.to_datetime(start, dayfirst=True)
+            start_dt = validate_datetime(start)
             if start_dt.time() == pd.Timestamp.min.time():  # no time provided
                 start_iso = start_dt.replace(hour=0, minute=0, second=0)
             else:
@@ -79,7 +104,7 @@ class PatientRecord:
             params.append(start_iso.strftime('%Y-%m-%d %H:%M:%S'))
 
         if end:
-            end_dt = pd.to_datetime(end, dayfirst=True)
+            end_dt = validate_datetime(end)
             if end_dt.time() == pd.Timestamp.min.time():  # no time provided
                 end_iso = end_dt.replace(hour=23, minute=59, second=59)
             else:
@@ -90,7 +115,8 @@ class PatientRecord:
         # Snapshot logic
         if snapshot_date:
             # Convert to ISO format
-            snapshot_iso = pd.to_datetime(snapshot_date, dayfirst=True).strftime('%Y-%m-%d %H:%M:%S')
+            snapshot_date = validate_datetime(snapshot_date)
+            snapshot_iso = snapshot_date.strftime('%Y-%m-%d %H:%M:%S')
             filters.append("m.TransactionInsertionTime <= ?")
             filters.append("(m.TransactionDeletionTime IS NULL OR m.TransactionDeletionTime > ?)")
             params.extend([snapshot_iso, snapshot_iso])
@@ -108,32 +134,41 @@ class PatientRecord:
 
         result = data.fetch_records(final_query, params)
         return result
-    
-    def register_patient(self):
+   
+    @staticmethod
+    def register_patient(patient_id, first_name, last_name):
         """
         Inserts a patient to the DB.
         """
+        # Validations:
+        validate_patient_id(patient_id)
+        validate_name(first_name, 'First Name')
+        validate_name(last_name, 'Last Name')
+        
         # Insert new patient
-        data.execute_query(INSERT_PATIENT_QUERY, (self.first_name, self.last_name, self.patient_id))
-        # # DEBUG: Check if patient was inserted
-        # print("[DEBUG]: Patients in DB:", data.cur.execute("SELECT * FROM Patients").fetchall())
-
-    def insert_measurement(self, loinc_num, value, unit, valid_start_time, transaction_time):
+        data.execute_query(INSERT_PATIENT_QUERY, (patient_id, first_name, last_name))
+    
+    @staticmethod
+    def insert_measurement(patient_id, loinc_num, value, unit, valid_start_time, transaction_time):
         """
         Insert a new measurement for a patient.
 
-        - Use CHECK_PATIENT_QUERY to get patient_id.
+        - Using existing validation methods before inserting the new record.
         - Insert measurement using INSERT_MEASUREMENT_QUERY.
-        - Raise PatientNotFound if not exists.
+        - Raise PatientNotFound and LoincCodeNotFound if not exists, or ValueError is the dates are not in a parseable format
         """
-        patient = data.fetch_records(CHECK_PATIENT_BY_ID_QUERY, (self.patient_id,))
-        if not patient:
+        # Validations
+        if not data.check_patient(patient_id):
             raise PatientNotFound("Patient not found")
+        if not data.check_loinc(loinc_num):
+            raise LoincCodeNotFound("Loinc code not found")
+        valid_start_time = validate_datetime(valid_start_time).strftime('%Y-%m-%d %H:%M:%S')
+        transaction_time = validate_datetime(transaction_time).strftime('%Y-%m-%d %H:%M:%S')
 
-            # Insert measurement
+        # Insert measurement
         data.execute_query(
             INSERT_MEASUREMENT_QUERY,
-            (self.patient_id, loinc_num, value, unit, valid_start_time, transaction_time)
+            (patient_id, loinc_num, value, unit, valid_start_time, transaction_time)
         )
 
     @staticmethod
@@ -145,23 +180,14 @@ class PatientRecord:
         - Update value using UPDATE_MEASUREMENT_QUERY.
         - Handle edge cases: no matching record.
         """
-        # Verify patient exists
-        patient = data.check_patient_by_id(patient_id)
-        if not patient:
+        # Verify input
+        if not data.check_patient(patient_id):
             raise PatientNotFound("Patient not found")
-
-        # Check if measurement exists (move this SELECT query to a .sql file if you want full consistency)
-        measurement_check_query = """
-                SELECT 1 FROM Measurements 
-                WHERE PatientId = ? AND LoincNum = ? AND ValidStartTime = ?
-            """
-        exists = data.cur.execute(
-            measurement_check_query,
-            (patient_id, loinc_num, valid_start_time)
-        ).fetchall()
-
-        if not exists:
-            raise Exception("Measurement not found to update.")
+        if not data.check_loinc(loinc_num):
+            raise LoincCodeNotFound("Loinc code not found")
+        valid_start_time = validate_datetime(valid_start_time).strftime('%Y-%m-%d %H:%M:%S')
+        if not data.check_record(patient_id, loinc_num, valid_start_time):
+            raise RecordNotFound("This record was not found in the DB")
 
         # Update the measurement value using execute_query
         data.execute_query(
@@ -170,7 +196,7 @@ class PatientRecord:
         )
 
     @staticmethod
-    def delete_measurement(first_name, last_name, loinc_num, valid_start_time):
+    def delete_measurement(patient_id, loinc_num, valid_start_time):
         """
         Delete a specific measurement.
 
@@ -179,27 +205,4 @@ class PatientRecord:
         - Handle edge cases: no matching record.
         """
         raise NotImplementedError("Update measurement not implemented yet")
-
-
-## ------------------ Validation Functions ------------------
-def validate_patient_id(patient_id):
-    if not patient_id.isdigit():
-        raise ValueError("Patient ID must contain digits only.")
-    if len(patient_id) != 9:
-        raise ValueError("Patient ID must be exactly 9 digits long.")
-
-def validate_name(name, field_name):
-    if not name.isalpha():
-        raise ValueError(f"{field_name} must contain alphabetic characters only.")
-
-def validate_loinc(loinc_code, data_access):
-    result = data.fetch_records(CHECK_LOINC_QUERY, (loinc_code,))
-    if not result:
-        raise ValueError(f"LOINC code '{loinc_code}' does not exist in the LOINC table.")
-
-def validate_datetime(dt_string, field_name):
-    try:
-        datetime.strptime(dt_string, "%Y-%m-%d %H:%M:%S")
-    except ValueError:
-        raise ValueError(f"{field_name} must be in format YYYY-MM-DD HH:MM:SS.")
 
