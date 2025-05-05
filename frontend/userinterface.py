@@ -84,11 +84,11 @@ class Application(tk.Tk):
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Search History")
 
-        self.search_patient_id = self._add_labeled_entry(tab, "Patient ID", "A 9 digit number\ne.g. 208399845")
-        self.search_loinc = self._add_labeled_entry(tab, "LOINC Code (optional)", "Enter LOINC code\ne.g. 2055-2")
-        self.search_start = self._add_labeled_entry(tab, "Start Date/Time (optional)", "Date/time format\ne.g. 01/01/2024 00:00 or just 01/01/2024")
-        self.search_end = self._add_labeled_entry(tab, "End Date/Time (optional)", "Date/time format\ne.g. 02/01/2024 23:59 or just 02/01/2024")
-        self.search_snapshot = self._add_labeled_entry(tab, "Snapshot Date/Time (optional)", "Used to show results relative to a past DB snapshot.\nDate/time format\ne.g. 03/01/2024 00:00 or just 03/01/2024.\nIf empty, will automatically use the current DB.")
+        self.search_patient_id = self._add_labeled_entry(tab, "Patient ID", "• A 9 digit number\n• e.g. 208399845")
+        self.search_loinc = self._add_labeled_entry(tab, "LOINC Code (optional)", "• a Valid LOINC code\n• e.g. 2055-2")
+        self.search_start = self._add_labeled_entry(tab, "Start Date/Time (optional)", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024")
+        self.search_end = self._add_labeled_entry(tab, "End Date/Time (optional)", "• Date/time format\n• e.g. 02/01/2024 23:59 or just 02/01/2024")
+        self.search_snapshot = self._add_labeled_entry(tab, "Snapshot Date/Time (optional)", "• Used to show results relative to a past DB snapshot\n• Date/time format\n• e.g. 03/01/2024 00:00 or just 03/01/2024\n• If empty, will automatically use the current DB")
 
         tk.Button(tab, text="Search", command=self.search_history).pack(pady=10)
         self.search_result = tk.Text(tab, height=15)
@@ -98,11 +98,11 @@ class Application(tk.Tk):
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Insert Measurement")
 
-        self.update_pid = self._add_labeled_entry(tab, "Patient ID", "A 9 digit number\ne.g. 208399845")
-        self.update_loinc = self._add_labeled_entry(tab, "LOINC Code", "Enter LOINC code\ne.g. 2055-2")
-        self.update_time = self._add_labeled_entry(tab, "Valid Start Time", "Date/time format\ne.g. 01/01/2024 00:00 or just 01/01/2024")
-        self.update_value = self._add_labeled_entry(tab, "New Value", "Numeric or textual value\ne.g. 12.5")
-        self.update_transaction_time = self._add_labeled_entry(tab, "Transaction Time (Optional)", "Date/time format\ne.g. 01/01/2024 00:00 or just 01/01/2024\nAllows to create retro updates, as if created in past time.\nIf empty, will automatically use current date-time.")
+        self.update_pid = self._add_labeled_entry(tab, "Patient ID", "• A 9 digit number\n• e.g. 208399845")
+        self.update_loinc = self._add_labeled_entry(tab, "LOINC Code", "• A valid LOINC code\ne.g. 2055-2")
+        self.update_time = self._add_labeled_entry(tab, "Valid Start Time", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024")
+        self.update_value = self._add_labeled_entry(tab, "New Value", "• Numeric or textual value\n• e.g. 12.5")
+        self.update_transaction_time = self._add_labeled_entry(tab, "Transaction Time (Optional)", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024\n• Allows to create retro updates, as if created in past time\n• If empty, will automatically use current date-time")
 
         tk.Button(tab, text="Insert", command=self.update_measurement).pack(pady=10)
         self.update_result = tk.Text(tab, height=5)
@@ -112,11 +112,11 @@ class Application(tk.Tk):
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Update Measurement")
 
-        self.update_pid = self._add_labeled_entry(tab, "Patient ID", "A 9 digit number\ne.g. 208399845")
-        self.update_loinc = self._add_labeled_entry(tab, "LOINC Code", "Enter LOINC code\ne.g. 2055-2")
-        self.update_time = self._add_labeled_entry(tab, "Valid Start Time", "Date/time format\ne.g. 01/01/2024 00:00 or just 01/01/2024")
-        self.update_value = self._add_labeled_entry(tab, "New Value", "Numeric or textual value\ne.g. 12.5")
-        self.update_transaction_time = self._add_labeled_entry(tab, "Transaction Time (Optional)", "Date/time format\ne.g. 01/01/2024 00:00 or just 01/01/2024\nAllows to create retro updates, as if created in past time.\nIf empty, will automatically use current date-time.")
+        self.update_pid = self._add_labeled_entry(tab, "Patient ID", "• A 9 digit number\n• e.g. 208399845")
+        self.update_loinc = self._add_labeled_entry(tab, "LOINC Code", "• A valid LOINC code\n• e.g. 2055-2")
+        self.update_time = self._add_labeled_entry(tab, "Valid Start Time", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024")
+        self.update_value = self._add_labeled_entry(tab, "New Value", "• Numeric or textual value\n• e.g. 12.5")
+        self.update_transaction_time = self._add_labeled_entry(tab, "Transaction Time (Optional)", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024\n• Allows to create retro updates, as if created in past time\n• If empty, will automatically use current date-time")
 
 
         tk.Button(tab, text="Update", command=self.update_measurement).pack(pady=10)
@@ -127,9 +127,9 @@ class Application(tk.Tk):
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Delete Measurement")
 
-        self.delete_pid = self._add_labeled_entry(tab, "Patient ID", "A 9 digit number\ne.g. 208399845")
-        self.delete_loinc = self._add_labeled_entry(tab, "LOINC Code", "Enter LOINC code\ne.g. 2055-2")
-        self.delete_time = self._add_labeled_entry(tab, "Valid Start Time", "Date/time format\ne.g. 01/01/2024 00:00 or just 01/01/2024")
+        self.delete_pid = self._add_labeled_entry(tab, "Patient ID", "• A 9 digit number\n• e.g. 208399845")
+        self.delete_loinc = self._add_labeled_entry(tab, "LOINC Code", "• A valid LOINC code\n• e.g. 2055-2")
+        self.delete_time = self._add_labeled_entry(tab, "Valid Start Time", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024")
 
         tk.Button(tab, text="Delete", command=self.delete_measurement).pack(pady=10)
         self.delete_result = tk.Text(tab, height=5)
