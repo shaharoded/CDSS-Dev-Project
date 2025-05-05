@@ -234,4 +234,55 @@ class PatientRecord:
         
         # Continue from here
         raise NotImplementedError("Update measurement not implemented yet")
+    
+
+if __name__ == "__main__":
+    print("🔍 Running business logic tests...")
+
+    record = PatientRecord()
+
+    try:
+        print("\n🧪 Test 1: Get patient by name (should succeed)...")
+        result = record.get_patient_by_name("John", "Doe")
+        for r in result:
+            print(f"✅ Found: ID={r[0]}, FirstName={r[1]}, LastName={r[2]}")
+    except PatientNotFound as e:
+        print(f"❌ Patient not found: {e}")
+    except Exception as e:
+        print(f"⚠️ Unexpected error: {e}")
+
+    try:
+        print("\n🧪 Test 2: Search history with snapshot and range...")
+        history = record.search_history(
+            patient_id="208399845",
+            snapshot_date="01/01/2024 12:00",
+            start="01/01/2024",
+            end="02/01/2024"
+        )
+        print(f"✅ Found {len(history)} records")
+        for row in history:
+            print("   ", row)
+    except Exception as e:
+        print(f"❌ Search failed: {e}")
+
+    try:
+        print("\n🧪 Test 3: Register a new patient (should succeed or fail if already exists)...")
+        record.register_patient("123456789", "Alice", "Smith")
+        print("✅ Registered patient successfully")
+    except Exception as e:
+        print(f"⚠️ Could not register: {e}")
+
+    try:
+        print("\n🧪 Test 4: Insert measurement (should validate and insert)...")
+        record.insert_measurement(
+            patient_id="123456789",
+            loinc_num="718-7",
+            value="14.2",
+            unit="mmol/L",
+            valid_start_time="01/04/2024 08:00",
+            transaction_time="01/04/2024 08:01"
+        )
+        print("✅ Inserted measurement")
+    except Exception as e:
+        print(f"❌ Insert failed: {e}")
 

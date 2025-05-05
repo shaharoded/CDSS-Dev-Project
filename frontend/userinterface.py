@@ -61,6 +61,9 @@ class Application(tk.Tk):
         self._create_delete_tab()
 
     def _add_labeled_entry(self, parent, label, tooltip_text):
+        """
+        Add header + tooltip for input cell
+        """
         frame = tk.Frame(parent)
         frame.pack(anchor="w", padx=10, pady=2)
         tk.Label(frame, text=label, width=30, anchor="w").pack(side="left")
@@ -138,6 +141,7 @@ class Application(tk.Tk):
     def get_patient_by_name(self):
         first = self.get_first_name.get()
         last = self.get_last_name.get()
+        
         try:
             results = self.record.get_patient_by_name(first, last)
             self.get_result.delete("1.0", tk.END)
