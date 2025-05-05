@@ -125,7 +125,11 @@ class DataAccess:
         for _, row in unique_patients.iterrows():
             self.execute_query(
                 INSERT_PATIENT_QUERY,
-                (row['PatientId'], row['First name'], row['Last name'])
+                (
+                    str(row['PatientId']).strip(), 
+                    str(row['First name']).strip().title(), 
+                    str(row['Last name']).strip().title()
+                )
             )
 
         # Insert measurements
@@ -133,12 +137,12 @@ class DataAccess:
             self.execute_query(
                 INSERT_MEASUREMENT_QUERY,
                 (
-                    row['PatientId'],
-                    row['LOINC-NUM'],
-                    row['Value'],
-                    row['Unit'],
-                    str(row['Valid start time']),
-                    str(row['Transaction time'])
+                    str(row['PatientId']).strip(),
+                    str(row['LOINC-NUM']).strip(),
+                    str(row['Value']).strip(),
+                    str(row['Unit']).strip(),
+                    str(row['Valid start time']).strip(),
+                    str(row['Transaction time']).strip()
                 )
             )
 
@@ -167,8 +171,15 @@ class DataAccess:
             for _, row in df.iterrows():
                 self.execute_query(
                     INSET_LOINC_CODE_QUERY,
-                    (row['LOINC_NUM'], row['COMPONENT'], row['PROPERTY'], row['TIME_ASPCT'],
-                    row['SYSTEM'], row['SCALE_TYP'], row['METHOD_TYP'])
+                    (
+                        str(row['LOINC_NUM']).strip(), 
+                        str(row['COMPONENT']).strip(), 
+                        str(row['PROPERTY']).strip(), 
+                        str(row['TIME_ASPCT']).strip(),
+                        str(row['SYSTEM']).strip(), 
+                        str(row['SCALE_TYP']).strip(), 
+                        str(row['METHOD_TYP']).strip()
+                    )
                 )
             print(f'[Info]: Loaded {len(df)} LOINC codes from ZIP.')
 

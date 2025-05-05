@@ -54,11 +54,12 @@ class Application(tk.Tk):
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(expand=True, fill='both')
 
-        self._create_get_patient_tab()
-        self._create_search_tab()
-        self._create_insert_tab()
-        self._create_update_tab()
-        self._create_delete_tab()
+        self._create_patient_search_tab()
+        self._create_measure_search_tab()
+        self._create_patient_insert_tab()
+        self._create_measure_insert_tab()
+        self._create_measure_update_tab()
+        self._create_measure_delete_tab()
 
     def _add_labeled_entry(self, parent, label, tooltip_text):
         """
@@ -72,7 +73,7 @@ class Application(tk.Tk):
         CreateToolTip(entry, tooltip_text)
         return entry
 
-    def _create_get_patient_tab(self):
+    def _create_patient_search_tab(self):
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Get Patient by Name")
 
@@ -83,7 +84,7 @@ class Application(tk.Tk):
         self.get_result = tk.Text(tab, height=10)
         self.get_result.pack()
 
-    def _create_search_tab(self):
+    def _create_measure_search_tab(self):
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Search History")
 
@@ -97,7 +98,19 @@ class Application(tk.Tk):
         self.search_result = tk.Text(tab, height=15)
         self.search_result.pack()
 
-    def _create_insert_tab(self):
+    def _create_patient_insert_tab(self):
+        tab = ttk.Frame(self.notebook)
+        self.notebook.add(tab, text="Insert Patient")
+
+        self.update_pid = self._add_labeled_entry(tab, "Patient ID", "• A 9 digit number\n• e.g. 208399845")
+        self.update_first_name = self._add_labeled_entry(tab, "First Name", "• A patient's first name\n• e.g. John")
+        self.update_last_name = self._add_labeled_entry(tab, "Last Name", "• A patient's last name\n• e.g. Doe")
+
+        tk.Button(tab, text="Insert Patient", command=self.insert_measurement).pack(pady=10)
+        self.update_result = tk.Text(tab, height=5)
+        self.update_result.pack()
+
+    def _create_measure_insert_tab(self):
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Insert Measurement")
 
@@ -107,11 +120,11 @@ class Application(tk.Tk):
         self.update_value = self._add_labeled_entry(tab, "New Value", "• Numeric or textual value\n• e.g. 12.5")
         self.update_transaction_time = self._add_labeled_entry(tab, "Transaction Time (Optional)", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024\n• Allows to create retro updates, as if created in past time\n• If empty, will automatically use current date-time")
 
-        tk.Button(tab, text="Insert", command=self.update_measurement).pack(pady=10)
+        tk.Button(tab, text="Insert Measurement", command=self.insert_measurement).pack(pady=10)
         self.update_result = tk.Text(tab, height=5)
         self.update_result.pack()
 
-    def _create_update_tab(self):
+    def _create_measure_update_tab(self):
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Update Measurement")
 
@@ -122,11 +135,11 @@ class Application(tk.Tk):
         self.update_transaction_time = self._add_labeled_entry(tab, "Transaction Time (Optional)", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024\n• Allows to create retro updates, as if created in past time\n• If empty, will automatically use current date-time")
 
 
-        tk.Button(tab, text="Update", command=self.update_measurement).pack(pady=10)
+        tk.Button(tab, text="Update Measurement", command=self.update_measurement).pack(pady=10)
         self.update_result = tk.Text(tab, height=5)
         self.update_result.pack()
 
-    def _create_delete_tab(self):
+    def _create_measure_delete_tab(self):
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Delete Measurement")
 
@@ -134,7 +147,7 @@ class Application(tk.Tk):
         self.delete_loinc = self._add_labeled_entry(tab, "LOINC Code", "• A valid LOINC code\n• e.g. 2055-2")
         self.delete_time = self._add_labeled_entry(tab, "Valid Start Time", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024")
 
-        tk.Button(tab, text="Delete", command=self.delete_measurement).pack(pady=10)
+        tk.Button(tab, text="Delete Measurement", command=self.delete_measurement).pack(pady=10)
         self.delete_result = tk.Text(tab, height=5)
         self.delete_result.pack()
 
@@ -163,10 +176,21 @@ class Application(tk.Tk):
                 self.search_result.insert(tk.END, f"{row}\n")
         except Exception as e:
             messagebox.showerror("Error", str(e))
-    
-    def update_measurement(self):
+
+    def insert_patient(self):
         try:
-            self.record.update_measurement(
+            self.record.register_patient(
+                self.update_pid.get(),
+                self.update_first_name.get(),
+                self.update_last_name.get()
+            )
+            messagebox.showinfo("Success", "New patient inserted.")
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    def insert_measurement(self):
+        try:
+            self.record.insert_measurement(
                 self.update_pid.get(),
                 self.update_loinc.get(),
                 self.update_time.get(),

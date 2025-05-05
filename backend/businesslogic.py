@@ -69,6 +69,8 @@ class PatientRecord:
         """
         Returns the list of matching patients by their names.
         """
+        # Input cleanup
+        first_name, last_name = str(first_name).strip(), str(last_name).strip()
         # Check if Patient Name exists (without name check)
         matches = data.fetch_records(CHECK_PATIENT_BY_NAME_QUERY, (first_name, last_name))
         if not matches:
@@ -87,8 +89,12 @@ class PatientRecord:
 
         NOTE: SEARCH_HISTORY_QUERY performs a JOIN with the LOINC table.
         """
+        # Input cleanup
+        for param in [patient_id, snapshot_date, loinc_num, start, end]:
+            if param:
+                param = str(param).strip()
 
-        # Input Validation
+        # Input validation
         if not data.check_patient(patient_id):
             raise PatientNotFound("Patient not found")
         validate_dates_relation(start, end, 'Start Date', 'End Date')
@@ -140,7 +146,6 @@ class PatientRecord:
             base_query = f.read()
 
         final_query = base_query.replace("{where_clause}", where_clause)
-
         result = data.fetch_records(final_query, params)
         return result
    
@@ -149,7 +154,14 @@ class PatientRecord:
         """
         Inserts a patient to the DB.
         """
+        # Input cleanup
+        patient_id = str(patient_id).strip()
+        first_name = str(first_name).strip()
+        last_name = str(last_name).strip()
+        
         # Validations:
+        if data.check_patient(patient_id):
+            raise ValueError("You tried to input an existing patient into the system.\nUse the search tab to verify your input.")
         validate_patient_id(patient_id)
         validate_name(first_name, 'First Name')
         validate_name(last_name, 'Last Name')
@@ -158,7 +170,7 @@ class PatientRecord:
         data.execute_query(INSERT_PATIENT_QUERY, (patient_id, first_name, last_name))
     
     @staticmethod
-    def insert_measurement(patient_id, loinc_num, value, unit, valid_start_time, transaction_time):
+    def insert_measurement(patient_id, loinc_num, value, unit, valid_start_time, transaction_time=None):
         """
         Insert a new measurement for a patient.
 
@@ -167,6 +179,14 @@ class PatientRecord:
         - Raise PatientNotFound and LoincCodeNotFound if not exists, or ValueError is the dates are not in a parseable format
         - Will not allow user to insert an unupdated version of an existing record into the system.
         """
+        # Input cleanup
+        patient_id = str(patient_id).strip()
+        loinc_num = str(loinc_num).strip()
+        value = str(value).strip()
+        unit = str(unit).strip()
+        valid_start_time = str(valid_start_time).strip()
+        transaction_time = str(transaction_time).strip() if transaction_time else transaction_time
+
         # Validations
         if not data.check_patient(patient_id):
             raise PatientNotFound("Patient not found")
@@ -189,7 +209,7 @@ class PatientRecord:
         )
 
     @staticmethod
-    def update_measurement(patient_id, loinc_num, valid_start_time, transaction_time, new_value):
+    def update_measurement(patient_id, loinc_num, valid_start_time, new_value, transaction_time=None):
         """
         Update an existing measurement value.
 
@@ -197,6 +217,13 @@ class PatientRecord:
         - Update value using UPDATE_MEASUREMENT_QUERY.
         - Handle edge cases: no matching record.
         """
+        # Input cleanup
+        patient_id = str(patient_id).strip()
+        loinc_num = str(loinc_num).strip()
+        valid_start_time = str(valid_start_time).strip()
+        new_value = str(new_value).strip()
+        transaction_time = str(transaction_time).strip() if transaction_time else transaction_time
+
         # Verify input
         if not data.check_patient(patient_id):
             raise PatientNotFound("Patient not found")
@@ -223,7 +250,12 @@ class PatientRecord:
         - Delete using DELETE_MEASUREMENT_QUERY.
         - Handle edge cases: no matching record.
         """
-                # Verify input
+        # Input cleanup
+        patient_id = str(patient_id).strip()
+        loinc_num = str(loinc_num).strip()
+        valid_start_time = str(valid_start_time).strip()
+        
+        # Verify input
         if not data.check_patient(patient_id):
             raise PatientNotFound("Patient not found")
         if not data.check_loinc(loinc_num):
@@ -262,10 +294,10 @@ if __name__ == "__main__":
     try:
         print("\n🧪 Test 2: Search history with snapshot and range...")
         history = record.search_history(
-            patient_id="208399845",
+            patient_id="345678904",
             snapshot_date="01/01/2024 12:00",
-            start="01/01/2024",
-            end="02/01/2024"
+            start="01/01/2000",
+            end="02/01/2023"
         )
         print(f"✅ Found {len(history)} records")
         for row in history:
