@@ -10,6 +10,8 @@ All SQL queries are saved separately under /queries/
 # Local Code
 from backend.dataaccess import DataAccess
 from backend.backend_config import *  # all query paths
+import re
+from datetime import datetime
 
 data = DataAccess()
 
@@ -30,6 +32,14 @@ class PatientRecord:
         self.last_name = last_name
 
     def check_patient(self):
+        # Check if PatientId exists (without name check)
+        patient_by_id = data._fetch_records(CHECK_PATIENT_BY_ID_QUERY, (self.patient_id,))
+        if patient_by_id:
+            db_first, db_last = patient_by_id[0]
+            return db_first, db_last  # Return name from DB
+        return None
+
+    def check_patient_by_id_only(self): #note:delete one of them
         # Check if PatientId exists (without name check)
         patient_by_id = data._fetch_records(CHECK_PATIENT_BY_ID_QUERY, (self.patient_id,))
         if patient_by_id:
@@ -156,4 +166,27 @@ class PatientRecord:
         - Handle edge cases: no matching record.
         """
         raise NotImplementedError("Update measurement not implemented yet")
+
+
+## ------------------ Validation Functions ------------------
+def validate_patient_id(patient_id):
+    if not patient_id.isdigit():
+        raise ValueError("Patient ID must contain digits only.")
+    if len(patient_id) != 9:
+        raise ValueError("Patient ID must be exactly 9 digits long.")
+
+def validate_name(name, field_name):
+    if not name.isalpha():
+        raise ValueError(f"{field_name} must contain alphabetic characters only.")
+
+def validate_loinc(loinc_code, data_access):
+    result = data._fetch_records(CHECK_LOINC_QUERY, (loinc_code,))
+    if not result:
+        raise ValueError(f"LOINC code '{loinc_code}' does not exist in the LOINC table.")
+
+def validate_datetime(dt_string, field_name):
+    try:
+        datetime.strptime(dt_string, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        raise ValueError(f"{field_name} must be in format YYYY-MM-DD HH:MM:SS.")
 

@@ -16,11 +16,13 @@ INITIATE_LOINC_TABLE_DDL = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'cre
 INSERT_PATIENT_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'insert_patient.sql')
 INSERT_MEASUREMENT_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'insert_measurement.sql')
 INSET_LOINC_CODE_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'insert_loinc.sql')
-CHECK_PATIENT_BY_ID_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_patient_by_id.sql')
 
 
 # SQL Queries
 CHECK_PATIENT_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_patient.sql')
+CHECK_LOINC_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_lonic.sql')
+CHECK_PATIENT_BY_ID_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_patient_by_id.sql')
 CHECK_TABLE_EXISTS_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_table_exists.sql')
 SEARCH_HISTORY_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_history.sql')
 UPDATE_MEASUREMENT_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'update_measurement.sql')
+
