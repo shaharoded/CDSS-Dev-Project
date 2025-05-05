@@ -50,9 +50,9 @@ class RecordNotFound(Exception):
 class PatientRecord:
     """
     Main patient record class to handle business logic.
+    Allows for empty initialization, As input will be given by the UI.
     """
-
-    def __init__(self, patient_id, first_name, last_name):
+    def __init__(self, patient_id=None, first_name=None, last_name=None):
         self.patient_id = patient_id
         self.first_name = first_name
         self.last_name = last_name
