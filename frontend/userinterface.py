@@ -88,7 +88,7 @@ class Application(tk.Tk):
         self.search_loinc = self._add_labeled_entry(tab, "LOINC Code (optional)", "Enter LOINC code\ne.g. 2055-2")
         self.search_start = self._add_labeled_entry(tab, "Start Date/Time (optional)", "Date/time format\ne.g. 01/01/2024 00:00 or just 01/01/2024")
         self.search_end = self._add_labeled_entry(tab, "End Date/Time (optional)", "Date/time format\ne.g. 02/01/2024 23:59 or just 02/01/2024")
-        self.search_snapshot = self._add_labeled_entry(tab, "Snapshot Date/Time (optional)", "Used to show results relative to a past DB snapshot.\nDate/time format\ne.g. 03/01/2024 00:00 or just 03/01/2024")
+        self.search_snapshot = self._add_labeled_entry(tab, "Snapshot Date/Time (optional)", "Used to show results relative to a past DB snapshot.\nDate/time format\ne.g. 03/01/2024 00:00 or just 03/01/2024.\nIf empty, will automatically use the current DB.")
 
         tk.Button(tab, text="Search", command=self.search_history).pack(pady=10)
         self.search_result = tk.Text(tab, height=15)
