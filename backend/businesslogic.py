@@ -73,6 +73,7 @@ class PatientRecord:
     def get_patient_by_name(first_name, last_name):
         """
         Returns the list of matching patients by their names.
+        Uses to verify the patient's ID if only name is known and to solve duplications in the system.
         """
         # Input cleanup
         first_name, last_name = str(first_name).strip(), str(last_name).strip()
@@ -154,7 +155,7 @@ class PatientRecord:
     @staticmethod
     def register_patient(patient_id, first_name, last_name):
         """
-        Inserts a patient to the DB.
+        Inserts a new patient to the DB (Patients table).
         """
         # Input cleanup
         patient_id = str(patient_id).strip()

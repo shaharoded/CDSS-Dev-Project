@@ -33,6 +33,10 @@ class DataAccess:
         """
         A general function supposed to return a bool value if a searched record (based on params) exists in the snapshot of the DB.
         The operation is determined by the query, that should return 0 or 1.
+
+        Args:
+            query_or_path (str): str (describing the query) or .sql file path
+            params (tuple): A tuple of size <0 with the input parameters needed to run the query, based on it's placeholders (?) 
         """
         if os.path.isfile(query_or_path):
             with open(query_or_path, 'r') as file:
@@ -46,6 +50,10 @@ class DataAccess:
         """
         A general function supposed to return a specific value like unit, date etc.
         The operation is determined by the query, that should have 1 item in the SELECT section.
+
+        Args:
+            query_or_path (str): str (describing the query) or .sql file path
+            params (tuple): A tuple of size <0 with the input parameters needed to run the query, based on it's placeholders (?)
         """
         if os.path.isfile(query_or_path):
             with open(query_or_path, 'r') as file:
@@ -60,6 +68,10 @@ class DataAccess:
         """
         Executes an INSERT/UPDATE/DELETE query.
         Accepts either a path to a .sql file or a raw SQL string.
+
+        Args:
+            query_or_path (str): str (describing the query) or .sql file path
+            params (tuple): A tuple of size <0 with the input parameters needed to run the query, based on it's placeholders (?)
         """
         if os.path.isfile(query_or_path):
             with open(query_or_path, 'r') as file:
@@ -75,6 +87,10 @@ class DataAccess:
         Executes a SELECT query.
         Accepts either a path to a .sql file or a raw SQL string.
         Returns all rows.
+
+        Args:
+            query_or_path (str): str (describing the query) or .sql file path
+            params (tuple): A tuple of size <0 with the input parameters needed to run the query, based on it's placeholders (?)
         """
         if os.path.isfile(query_or_path):
             with open(query_or_path, 'r') as file:
@@ -88,6 +104,10 @@ class DataAccess:
         """
         Execute a DDL script from a file.
         Used to initialize tables in the DB.
+
+        Args:
+            query_or_path (str): str (describing the query) or .sql file path
+            params (tuple): A tuple of size <0 with the input parameters needed to run the query, based on it's placeholders (?)
         """
         with open(script_path, 'r') as file:
             script = file.read()
@@ -96,12 +116,16 @@ class DataAccess:
 
     def __check_tables_exist(self):
         """
-        Ensuring DB was initialized
+        Ensuring DB was initialized.
         """
         result = self.fetch_records(CHECK_TABLE_EXISTS_QUERY, ())
         return bool(result)
 
     def __load_patients_from_excel(self):
+        """
+        The function assumes the existance of the initial dataset as an excel file in the designated path (PATIENTS_FILE).
+        It will create the Patients and Measurements query in the DB.
+        """
         df = pd.read_excel(PATIENTS_FILE)
 
         if df.empty:
@@ -148,6 +172,8 @@ class DataAccess:
     def __load_loinc_from_zip(self):
         """
         Load LOINC codes from a ZIP file and insert them into the Loinc table in the DB for future use.
+        Assumes the existance of the .zip file which is publically available.
+        Looks for the Loinc.csv file which is the relevant one for this task.
         """
         extract_path = 'data/loinc_extracted'
         with zipfile.ZipFile(LOINC_CODES_ZIP, 'r') as zip_ref:

@@ -8,6 +8,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from backend.businesslogic import PatientRecord
 
 class CreateToolTip:
+    '''
+    Creates a tooltip for the input boxes in the UI.
+    '''
     def __init__(self, widget, text='widget info'):
         self.widget = widget
         self.text = text
@@ -32,6 +35,15 @@ class CreateToolTip:
 
 
 class Application(tk.Tk):
+    """
+    Implementation of the App, with 3 main sections:
+    1. __init__
+    2. Tool tip control (_add_labeled_entry)
+    3. Tab definition functions (design / buttons)
+    4. Functionality definition functions (1 per tab - activates and mirrors the business logic functions)
+    """
+
+    # ----------------------------------- __init__ -----------------------------------
     def __init__(self):
         super().__init__()
         self.title("CDSS Patient Interface")
@@ -60,7 +72,9 @@ class Application(tk.Tk):
         self._create_measure_insert_tab()
         self._create_measure_update_tab()
         self._create_measure_delete_tab()
+    
 
+    # ----------------------------------- Tool tip control -----------------------------------
     def _add_labeled_entry(self, parent, label, tooltip_text):
         """
         Add header + tooltip for input cell
@@ -72,7 +86,9 @@ class Application(tk.Tk):
         entry.pack(side="left")
         CreateToolTip(entry, tooltip_text)
         return entry
-
+    
+    
+    # ----------------------------------- Tab definition functions -----------------------------------
     def _create_patient_search_tab(self):
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Get Patient by Name")
@@ -99,7 +115,6 @@ class Application(tk.Tk):
         self.search_result = tk.Text(tab, height=15, width=100)
         self.search_result.pack()
         self.search_result.configure(state='disabled')  # make read-only by default
-
 
     def _create_patient_insert_tab(self):
         tab = ttk.Frame(self.notebook)
@@ -130,7 +145,6 @@ class Application(tk.Tk):
         self.create_measurement_update_result.pack()
         self.create_measurement_update_result.configure(state='disabled')  # make read-only by default
 
-
     def _create_measure_update_tab(self):
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Update Measurement")
@@ -148,7 +162,6 @@ class Application(tk.Tk):
         self.update_measurement_update_result.pack()
         self.update_measurement_update_result.configure(state='disabled')  # make read-only by default
 
-
     def _create_measure_delete_tab(self):
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Delete Measurement")
@@ -163,6 +176,8 @@ class Application(tk.Tk):
         self.delete_measurement_delete_result.pack()
         self.delete_measurement_delete_result.configure(state='disabled')  # make read-only by default
 
+
+    # ----------------------------------- Functionality definition functions -----------------------------------
     def get_patient_by_name(self):
         first = self.search_first_name.get()
         last = self.search_last_name.get()
