@@ -28,53 +28,33 @@ class DataAccess:
             self.__load_patients_from_excel()
             self.__load_loinc_from_zip()
             self.__print_db_info()
-
-    def check_patient(self, patient_id):
-        """
-        Returns True if the given PatientId exists in the database.
-        """
-        result = self.fetch_records(CHECK_PATIENT_BY_ID_QUERY, (patient_id,))
-        return bool(result)
     
-    def check_loinc(self, loinc_code):
+    def check_record(self, query_or_path, params):
         """
-        Returns True if the given Loinc-code exists in the database.
+        A general function supposed to return a bool value if a searched record (based on params) exists in the snapshot of the DB.
+        The operation is determined by the query, that should return 0 or 1.
         """
-        result = self.fetch_records(CHECK_LOINC_QUERY, (loinc_code,))
+        if os.path.isfile(query_or_path):
+            with open(query_or_path, 'r') as file:
+                query = file.read()
+        else:
+            query = query_or_path  # assume raw SQL
+        result = self.fetch_records(query, params)
         return bool(result)
-    
-    def check_record(self, patient_id, loinc_code, valid_start_time, transaction_time):
+        
+    def get_attr(self, query_or_path, params):
         """
-        Returns True if the given record exists in this snapshot of the database (described by transaction_time).
+        A general function supposed to return a specific value like unit, date etc.
+        The operation is determined by the query, that should have 1 item in the SELECT section.
         """
-        result = self.fetch_records(CHECK_RECORD_QUERY, (patient_id, loinc_code, valid_start_time, transaction_time))
-        return bool(result)
-
-    def get_existing_unit(self, patient_id, loinc_code, valid_start_time):
-        """
-        Fetch the unit from the latest existing record using the SQL query.
-        Will get the unit from the most recent version of this record, using the latest TransactionInsertionTime.
-        """
-        result = self.fetch_records(GET_EXISTING_UNIT_QUERY, (patient_id, loinc_code, valid_start_time))
+        if os.path.isfile(query_or_path):
+            with open(query_or_path, 'r') as file:
+                query = file.read()
+        else:
+            query = query_or_path  # assume raw SQL
+        result = self.fetch_records(query, params)
         return result[0][0] if result else None
 
-    def get_loinc_by_component(self, component):
-        """
-        Get the LOINC code associated with the given component name.
-        Returns the LOINC code string if found, or None if not found.
-        """
-        result = self.fetch_records(GET_LOINC_BY_COMPONENT_QUERY, (component,))
-        return result[0][0] if result else None
-    
-    def get_future_record_time(self, patient_id, loinc_code, valid_start_time, transaction_time):
-        """
-        Returns the next TransactionInsertionTime after the one you're inserting,
-        for the same (PatientId, LoincNum, ValidStartTime).
-        Used to set the TransactionDeletionTime for the new backfilled record.
-        Returns a string (ISO datetime) or None.
-        """
-        result = self.fetch_records(CHECK_FUTURE_RECORD_QUERY, (patient_id, loinc_code, valid_start_time, transaction_time))
-        return result[0][0] if result else None
     
     def execute_query(self, query_or_path, params):
         """
