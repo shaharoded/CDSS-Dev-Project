@@ -172,7 +172,7 @@ class PatientRecord:
         data.execute_query(INSERT_PATIENT_QUERY, (patient_id, first_name, last_name))
     
     @staticmethod
-    def insert_measurement(patient_id, loinc_num, value, unit, valid_start_time, transaction_time=None):
+    def insert_measurement(patient_id, valid_start_time, value, unit, component=None, loinc_num=None, transaction_time=None):
         """
         Insert a new measurement for a patient.
 
@@ -189,20 +189,37 @@ class PatientRecord:
         valid_start_time = str(valid_start_time).strip()
         transaction_time = str(transaction_time).strip() if transaction_time else transaction_time
 
-        # Validations
+        # Verify input
         if not data.check_patient(patient_id):
             raise PatientNotFound("Patient not found")
-        if not data.check_loinc(loinc_num):
-            raise LoincCodeNotFound("Loinc code not found")
+        
+        # CASE 1: Both LOINC and Component provided → check match
+        if loinc_num and component:
+            loinc_num_1 = loinc_num
+            loinc_num_2 = str(data.get_loinc_by_component(component)).strip()
+            if not loinc_num_1 == loinc_num_2:
+                raise ValueError(f"LOINC code '{loinc_num_1}' and component '{component}' do not match. The input component returned Loinc-Code={loinc_num_2}. Check the LOINC repository to fetch the correct code / name of the intended concept.")
+        
+        # CASE 2: Only Component provided → look up LOINC code
+        elif component and not loinc_num:
+            loinc_num = data.get_loinc_by_component(component)
+            if not loinc_num:
+                raise ValueError(f"No LOINC code found for component '{component}' in LOINC table. Check the LOINC repository to fetch the correct code / name of the intended concept.")
+        
+        # CASE 3: Only LOINC-Code provided → continue as usual
+        elif loinc_num:
+            if not data.check_loinc(loinc_num):
+                raise LoincCodeNotFound("LOINC code not found in LOINC table.")
+        else:
+            raise ValueError("You must provide at least a LOINC code or a component name in order to update a measurement.")
+        
         valid_start_time = validate_datetime(valid_start_time).strftime('%Y-%m-%d %H:%M:%S')
         transaction_time = validate_datetime(transaction_time).strftime('%Y-%m-%d %H:%M:%S')
         validate_dates_relation(valid_start_time, transaction_time, 'Valid Start Date', 'Transaction Insertion Time')
 
-        # In case transaction_time is not the most updated TransactionInsertionTime for this record, get the TransactionDeletionDate for it
-        # deletion_date can be None
-        future_record_date = data.get_future_record_time(patient_id, loinc_num, valid_start_time, transaction_time)
-        if future_record_date:
-            raise ValueError(f"This record has a newer update from {future_record_date} and cannot be updated to an unupdated version.")
+        # Check if this record already exists (and needs to be handled with update, not insert)
+        if data.check_record(patient_id, loinc_num, valid_start_time, transaction_time):
+            raise ValueError("This record already exists in the DB and must be updated - not inserted. You cannot insert a new record with the same PatientId + LoincNum + ValidStartTime as another record.")
 
         # Insert measurement
         data.execute_query(
@@ -211,7 +228,7 @@ class PatientRecord:
         )
 
     @staticmethod
-    def update_measurement(patient_id, loinc_num, valid_start_time, new_value, transaction_time=None):
+    def update_measurement(patient_id, valid_start_time, new_value,component=None, loinc_num=None, transaction_time=None):
         """
         Update an existing measurement value.
 
@@ -225,22 +242,59 @@ class PatientRecord:
         valid_start_time = str(valid_start_time).strip()
         new_value = str(new_value).strip()
         transaction_time = str(transaction_time).strip() if transaction_time else transaction_time
-
+        
         # Verify input
         if not data.check_patient(patient_id):
             raise PatientNotFound("Patient not found")
-        if not data.check_loinc(loinc_num):
-            raise LoincCodeNotFound("Loinc code not found")
+
+        # CASE 1: Both LOINC and Component provided → check match
+        if loinc_num and component:
+            loinc_num_1 = loinc_num
+            loinc_num_2 = str(data.get_loinc_by_component(component)).strip()
+            if not loinc_num_1 == loinc_num_2:
+                raise ValueError(f"LOINC code '{loinc_num_1}' and component '{component}' do not match. The input component returned Loinc-Code={loinc_num_2}. Check the LOINC repository to fetch the correct code / name of the intended concept.")
+        
+        # CASE 2: Only Component provided → look up LOINC code
+        elif component and not loinc_num:
+            loinc_num = data.get_loinc_by_component(component)
+            if not loinc_num:
+                raise ValueError(f"No LOINC code found for component '{component}' in LOINC table. Check the LOINC repository to fetch the correct code / name of the intended concept.")
+        
+        # CASE 3: Only LOINC-Code provided → continue as usual
+        elif loinc_num:
+            if not data.check_loinc(loinc_num):
+                raise LoincCodeNotFound("LOINC code not found in LOINC table.")
+        else:
+            raise ValueError("You must provide at least a LOINC code or a component name in order to update a measurement.")
+
         valid_start_time = validate_datetime(valid_start_time).strftime('%Y-%m-%d %H:%M:%S')
         transaction_time = validate_datetime(transaction_time).strftime('%Y-%m-%d %H:%M:%S')
         validate_dates_relation(valid_start_time, transaction_time, 'Valid Start Date', 'Transaction Insertion Time')
-        if not data.check_record(patient_id, loinc_num, valid_start_time):
-            raise RecordNotFound("This record was not found in the DB")
+        
+        # Check if this record doesn't exists (and needs to be handled with insert, not update)
+        if not data.check_record(patient_id, loinc_num, valid_start_time, transaction_time):
+            raise RecordNotFound("This record was not found in the DB. If this record should exist - maybe you used an irrelevant DB snapshot? (with Transaction time), else - please use the Insert Measurement tab")
 
-        # Update the measurement value using execute_query
+        # In case transaction_time is not the most updated TransactionInsertionTime for this record, get the TransactionDeletionDate for it
+        # deletion_date can be None
+        future_record_date = data.get_future_record_time(patient_id, loinc_num, valid_start_time, transaction_time)
+        if future_record_date:
+            raise ValueError(f"This record has a newer update from {future_record_date} and cannot be updated to an unupdated version.")
+        
+        # Fetch the unit from existing records
+        unit = data.get_existing_unit(patient_id, loinc_num, valid_start_time)
+        # No exception in case non found, as that's the reflection of this concept in the DB.
+
+        # Insert the new measurement row
         data.execute_query(
-            UPDATE_MEASUREMENT_QUERY,
-            (new_value, patient_id, loinc_num, valid_start_time)
+            INSERT_MEASUREMENT_QUERY,
+            (patient_id, loinc_num, new_value, unit, valid_start_time, transaction_time)
+        )
+
+        # Update end time on older records
+        data.execute_query(
+            UPDATE_OLD_RECORDS_QUERY,
+            (transaction_time, patient_id, loinc_num, valid_start_time, transaction_time, transaction_time)
         )
 
     @staticmethod

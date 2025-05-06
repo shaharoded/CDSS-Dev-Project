@@ -49,6 +49,22 @@ class DataAccess:
         """
         result = self.fetch_records(CHECK_RECORD_QUERY, (patient_id, loinc_code, valid_start_time, transaction_time))
         return bool(result)
+
+    def get_existing_unit(self, patient_id, loinc_code, valid_start_time):
+        """
+        Fetch the unit from the latest existing record using the SQL query.
+        Will get the unit from the most recent version of this record, using the latest TransactionInsertionTime.
+        """
+        result = self.fetch_records(GET_EXISTING_UNIT_QUERY, (patient_id, loinc_code, valid_start_time))
+        return result[0][0] if result else None
+
+    def get_loinc_by_component(self, component):
+        """
+        Get the LOINC code associated with the given component name.
+        Returns the LOINC code string if found, or None if not found.
+        """
+        result = self.fetch_records(GET_LOINC_BY_COMPONENT_QUERY, (component,))
+        return result[0][0] if result else None
     
     def get_future_record_time(self, patient_id, loinc_code, valid_start_time, transaction_time):
         """

@@ -122,6 +122,7 @@ class Application(tk.Tk):
         self.insert_measurement_update_loinc = self._add_labeled_entry(tab, "LOINC Code", "• A valid LOINC code\n• e.g. 2055-2")
         self.insert_measurement_update_time = self._add_labeled_entry(tab, "Valid Start Time", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024")
         self.insert_measurement_update_value = self._add_labeled_entry(tab, "New Value", "• Numeric or textual value\n• e.g. 12.5")
+        self.update_measurement_update_unit = self._add_labeled_entry(tab, "Unit", "• Textual unit (for the measurement)\n• e.g. m/g")
         self.insert_measurement_update_transaction_time = self._add_labeled_entry(tab, "Transaction Time (Optional)", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024\n• Allows to create retro updates, as if created in past time\n• If empty, will automatically use current date-time")
 
         tk.Button(tab, text="Insert Measurement", command=self.insert_measurement).pack(pady=10)
@@ -136,6 +137,7 @@ class Application(tk.Tk):
 
         self.update_measurement_update_pid = self._add_labeled_entry(tab, "Patient ID", "• A 9 digit number\n• e.g. 208399845")
         self.update_measurement_update_loinc = self._add_labeled_entry(tab, "LOINC Code", "• A valid LOINC code\n• e.g. 2055-2")
+        self.update_measurement_update_component = self._add_labeled_entry(tab, "LOINC Component Name (optional)", "• A valid LOINC component name\n• e.g. Albumin\n• You can filter the db using this field, the LOINC-Code or both")
         self.update_measurement_update_time = self._add_labeled_entry(tab, "Valid Start Time", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024")
         self.update_measurement_update_value = self._add_labeled_entry(tab, "New Value", "• Numeric or textual value\n• e.g. 12.5")
         self.update_measurement_update_transaction_time = self._add_labeled_entry(tab, "Transaction Time (Optional)", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024\n• Allows to create retro updates, as if created in past time\n• If empty, will automatically use current date-time")
@@ -225,32 +227,74 @@ class Application(tk.Tk):
             messagebox.showerror("Error", str(e))
 
     def insert_measurement(self):
+        pid = self.update_measurement_update_pid.get()
+        valid_time = self.update_measurement_update_time.get()
+        value = self.update_measurement_update_value.get()
+        unit = self.update_measurement_update_unit.get()
+        loinc_name = self.update_measurement_update_component.get()
+        loinc_code = self.update_measurement_update_loinc.get()
+        transaction_time = self.update_measurement_update_transaction_time.get()
+        if loinc_code and loinc_name:
+           loinc = f"{loinc_code}: {loinc_name}"
+        else:
+            if loinc_code:
+                loinc = loinc_code
+            else:
+                loinc = loinc_name
+        
         try:
             self.record.insert_measurement(
                 self.insert_measurement_update_pid.get(),
-                self.insert_measurement_update_loinc.get(),
                 self.insert_measurement_update_time.get(),
                 self.insert_measurement_update_value.get(),
+                self.update_measurement_update_unit.get(),
+                self.update_measurement_update_component.get(),
+                self.insert_measurement_update_loinc.get(),
                 self.insert_measurement_update_transaction_time.get()
             )
             self.create_measurement_update_result.configure(state='normal')  # enable editing
-            # Input here the message you wish to add when record updates
+            self.create_measurement_update_result.delete("1.0", tk.END)
+            self.create_measurement_update_result.insert(tk.END, "-> A new patient's measurement record was added to the DB:\n")
+            self.create_measurement_update_result.insert(tk.END, f"-> PatientId: {pid}, LOINC: {loinc}, ValidStartTime: {valid_time}\n")
+            self.create_measurement_update_result.insert(tk.END, f"-> New Value = {value}\n")
+            self.create_measurement_update_result.insert(tk.END, f"-> Effective Date / Time (Transaction time): {transaction_time}\n")
             self.create_measurement_update_result.configure(state='disabled')  # disable editing again
             messagebox.showinfo("Success", "Measurement inserted.")
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
     def update_measurement(self):
+        pid = self.update_measurement_update_pid.get()
+        valid_time = self.update_measurement_update_time.get()
+        new_value = self.update_measurement_update_value.get()
+        loinc_name = self.update_measurement_update_component.get()
+        loinc_code = self.update_measurement_update_loinc.get()
+        transaction_time = self.update_measurement_update_transaction_time.get()
+        if loinc_code and loinc_name:
+           loinc = f"{loinc_code}: {loinc_name}"
+        else:
+            if loinc_code:
+                loinc = loinc_code
+            else:
+                loinc = loinc_name
+        
         try:
             self.record.update_measurement(
                 self.update_measurement_update_pid.get(),
-                self.update_measurement_update_loinc.get(),
                 self.update_measurement_update_time.get(),
                 self.update_measurement_update_value.get(),
+                self.update_measurement_update_component.get(),
+                self.update_measurement_update_loinc.get(),
                 self.update_measurement_update_transaction_time.get()
             )
             self.update_measurement_update_result.configure(state='normal')  # enable editing
             # Input here the message you wish to add when record updates
+            # Add the changed 
+            self.update_measurement_update_result.delete("1.0", tk.END)
+            self.update_measurement_update_result.insert(tk.END, "-> A patient's measurement record was updated in the DB:\n")
+            self.update_measurement_update_result.insert(tk.END, f"-> PatientId: {pid}, LOINC: {loinc}, ValidStartTime: {valid_time}\n")
+            self.update_measurement_update_result.insert(tk.END, f"-> New Value = {new_value}\n")
+            self.update_measurement_update_result.insert(tk.END, f"-> Effective Date / Time (Transaction time): {transaction_time}\n")
             self.update_measurement_update_result.configure(state='disabled')  # disable editing again
             messagebox.showinfo("Success", "Measurement updated.")
         except Exception as e:
