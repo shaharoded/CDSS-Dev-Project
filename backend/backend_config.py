@@ -26,6 +26,7 @@ CHECK_RECORD_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_rec
 CHECK_RECORD_FOR_UPDATE_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_record_for_update.sql')
 CHECK_FUTURE_RECORD_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_future_record.sql')
 CHECK_TABLE_EXISTS_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_table_exists.sql')
+CHECK_LOINC_COMPONENT_MATCH_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_loinc_component_match.sql')
 SEARCH_HISTORY_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_history.sql')
 UPDATE_MEASUREMENT_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'update_measurement.sql') # In-place value update, currently irrelevant.
 UPDATE_OLD_RECORDS_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'update_old_records.sql')

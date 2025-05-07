@@ -275,14 +275,15 @@ class PatientRecord:
         if not data.check_record(CHECK_PATIENT_BY_ID_QUERY, (patient_id,)):
             raise PatientNotFound("Patient not found")
 
-        # CASE 1: Both LOINC and Component provided → check match
-        if loinc_num and component:
-            loinc_num_1 = loinc_num
-            loinc_num_2 = str(data.get_attr(GET_LOINC_BY_COMPONENT_QUERY, (component,))).strip()
-            print(loinc_num_2)  # to delete later
-            if not loinc_num_1 == loinc_num_2:
-                raise ValueError(f"LOINC code '{loinc_num_1}' and component '{component}' do not match. The input component returned Loinc-Code={loinc_num_2}. Check the LOINC repository to fetch the correct code / name of the intended concept.")
-        
+            # CASE 1: Both LOINC and Component provided → check match
+            if loinc_num and component:
+                loinc_num_1 = loinc_num
+                loinc_num_2 = str(data.get_attr(GET_LOINC_BY_COMPONENT_QUERY, (component,))).strip()
+                if not loinc_num_1 == loinc_num_2:
+                    raise ValueError(
+                        f"LOINC code '{loinc_num_1}' and component '{component}' do not match. The input component returned Loinc-Code={loinc_num_2}. Check the LOINC repository to fetch the correct code / name of the intended concept.")
+
+
         # CASE 2: Only Component provided → look up LOINC code
         elif component and not loinc_num:
             loinc_num = data.get_attr(GET_LOINC_BY_COMPONENT_QUERY, (component,))
@@ -356,6 +357,10 @@ class PatientRecord:
         # Continue from here
         raise NotImplementedError("Update measurement not implemented yet")
     
+
+
+
+
 
 
 
