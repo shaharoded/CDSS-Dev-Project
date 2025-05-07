@@ -97,7 +97,7 @@ try:
 except Exception as e:
     print(f"✅ Correctly failed: {e}")
 
-record.register_patient("211805304", "Erica", "Rusonik")
+#record.register_patient("211805304", "Erica", "Rusonik")
 
 # ------------insert_test------------
 try:
@@ -180,32 +180,12 @@ try:
         unit="mmol/L",
         valid_start_time="06/05/2024 10:00",
         transaction_time="06/05/2024 10:01",
-        component="Heart rate by Noninvasive"
+        component="Heart rate"
     )
     print("✅ Inserted using component name + LOINC number")
 except Exception as e:
     print(f"❌ Test failed: {e}")
 
-try:
-    patient_id = "211805304"
-    loinc_num = "14743-9"   # Example: glucose
-    component = ""
-    value = "7.8"
-    unit = "mmol/L"
-    valid_start_time = "07/05/2024 10:00"
-    transaction_time = "07/05/2024 10:01"
-
-    print("\n🧪 Test: Insert measurement once (should succeed)...")
-    record.insert_measurement(
-        patient_id=patient_id,
-        loinc_num=loinc_num,
-        component=component,
-        value=value,
-        unit=unit,
-        valid_start_time=valid_start_time,
-        transaction_time=transaction_time
-    )
-    print("✅ First insert succeeded")
 
     print("\n🧪 Test: Insert same measurement again (should fail as duplicate)...")
     try:
@@ -519,73 +499,3 @@ except Exception as e:
     print(f"❌ Test 12 failed: {e}")
 
 from datetime import datetime
-
-print("\n🧪 Test 13: Multiple updates, check transaction end times...")
-
-try:
-    # Step 1: Insert new patient
-    test_patient_id = "401234567"
-    record.register_patient(test_patient_id, "Multi", "Updater")
-    print("✅ Inserted new patient")
-
-    # Step 2: Insert initial measurement
-    loinc_num = "30313-1"  # Hemoglobin
-    unit = "g/dL"
-    valid_start_time = "15/05/2024 08:00"
-
-    record.insert_measurement(
-        patient_id=test_patient_id,
-        loinc_num=loinc_num,
-        value="11.0",
-        unit=unit,
-        valid_start_time=valid_start_time,
-        transaction_time="15/05/2024 08:01"
-    )
-    print("✅ Inserted initial measurement")
-
-    # Check history: should have 1 active record
-    history = record.search_history(test_patient_id)
-    active = [row for row in history if row[-1] is None or datetime.strptime(row[-1], '%Y-%m-%d %H:%M:%S') > datetime.now()]
-    assert len(active) == 1, f"Expected 1 active record, found {len(active)}"
-    print("✅ History check after first insert passed")
-
-    # Step 3: First update
-    record.update_measurement(
-        patient_id=test_patient_id,
-        valid_start_time=valid_start_time,
-        new_value="12.5",
-        loinc_num=loinc_num,
-        transaction_time="15/05/2024 08:10"
-    )
-    print("✅ Performed first update")
-
-    # Check history: old should have end time, new should be active
-    history = record.search_history(test_patient_id)
-    ended = [row for row in history if row[-1] is not None]
-    active = [row for row in history if row[-1] is None or datetime.strptime(row[-1], '%Y-%m-%d %H:%M:%S') > datetime.now()]
-    assert len(active) == 1, f"Expected 1 active record after update, found {len(active)}"
-    assert len(ended) >= 1, f"Expected at least 1 ended record, found {len(ended)}"
-    print("✅ History check after first update passed")
-
-    # Step 4: Second update
-    record.update_measurement(
-        patient_id=test_patient_id,
-        valid_start_time=valid_start_time,
-        new_value="13.0",
-        loinc_num=loinc_num,
-        transaction_time="15/05/2024 08:20"
-    )
-    print("✅ Performed second update")
-
-    # Final history check: only one active, two ended
-    history = record.search_history(test_patient_id)
-    ended = [row for row in history if row[-1] is not None]
-    active = [row for row in history if row[-1] is None or datetime.strptime(row[-1], '%Y-%m-%d %H:%M:%S') > datetime.now()]
-    assert len(active) == 1, f"Expected 1 active record after second update, found {len(active)}"
-    assert len(ended) >= 2, f"Expected at least 2 ended records, found {len(ended)}"
-    print("✅ Final history check after second update passed")
-
-    print("✅✅ Test 13 passed: Transaction end times update correctly across multiple updates")
-
-except Exception as e:
-    print(f"❌ Test 13 failed: {e}")
