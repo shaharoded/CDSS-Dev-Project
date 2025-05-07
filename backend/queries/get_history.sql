@@ -8,9 +8,8 @@ SELECT m.LoincNum,
        m.Value,
        m.Unit,
        m.ValidStartTime,
-       m.TransactionStartTime
+       m.TransactionInsertionTime
 FROM Measurements m
 JOIN Loinc l ON m.LoincNum = l.LoincNum
-WHERE m.PatientId = ?
-AND {where_clause}
+WHERE {where_clause}
 ORDER BY m.ValidStartTime ASC;
