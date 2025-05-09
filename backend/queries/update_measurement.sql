@@ -8,6 +8,6 @@ WHERE rowid = (
     WHERE PatientId = ?
       AND LoincNum = ?
       AND ValidStartTime = ?
-    ORDER BY TransactionInsertionTime DESC
+    ORDER BY DATE(TransactionInsertionTime) DESC
     LIMIT 1
 );

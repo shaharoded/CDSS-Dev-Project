@@ -6,6 +6,7 @@ from tkinter import ttk, messagebox
 # Local Code
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from backend.businesslogic import PatientRecord
+from datetime import datetime
 
 class CreateToolTip:
     '''
@@ -107,6 +108,7 @@ class Application(tk.Tk):
 
         self.search_patient_id = self._add_labeled_entry(tab, "Patient ID", "• A 9 digit number\n• e.g. 208399845")
         self.search_loinc = self._add_labeled_entry(tab, "LOINC Code (optional)", "• a Valid LOINC code\n• e.g. 2055-2")
+        self.search_component = self._add_labeled_entry(tab, "LOINC Name (optional)", "• A full or partial LOINC Name\n• Will accept partial match to substring\n• e.g. Glucose.")
         self.search_start = self._add_labeled_entry(tab, "Start Date/Time (optional)", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024")
         self.search_end = self._add_labeled_entry(tab, "End Date/Time (optional)", "• Date/time format\n• e.g. 02/01/2024 23:59 or just 02/01/2024")
         self.search_snapshot = self._add_labeled_entry(tab, "Snapshot Date/Time (optional)", "• Used to show results relative to a past DB snapshot\n• Date/time format\n• e.g. 03/01/2024 00:00 or just 03/01/2024\n• If empty, will automatically use the current DB")
@@ -135,9 +137,10 @@ class Application(tk.Tk):
 
         self.insert_measurement_update_pid = self._add_labeled_entry(tab, "Patient ID", "• A 9 digit number\n• e.g. 208399845")
         self.insert_measurement_update_loinc = self._add_labeled_entry(tab, "LOINC Code", "• A valid LOINC code\n• e.g. 2055-2")
+        self.insert_measurement_update_component = self._add_labeled_entry(tab, "Component","Optional measurement name\ne.g. Glucose, Hemoglobin")
         self.insert_measurement_update_time = self._add_labeled_entry(tab, "Valid Start Time", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024")
         self.insert_measurement_update_value = self._add_labeled_entry(tab, "New Value", "• Numeric or textual value\n• e.g. 12.5")
-        self.update_measurement_update_unit = self._add_labeled_entry(tab, "Unit", "• Textual unit (for the measurement)\n• e.g. m/g")
+        self.insert_measurement_update_unit = self._add_labeled_entry(tab, "Unit", "• Textual unit (for the measurement)\n• e.g. m/g")
         self.insert_measurement_update_transaction_time = self._add_labeled_entry(tab, "Transaction Time (Optional)", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024\n• Allows to create retro updates, as if created in past time\n• If empty, will automatically use current date-time")
 
         tk.Button(tab, text="Insert Measurement", command=self.insert_measurement).pack(pady=10)
@@ -168,6 +171,7 @@ class Application(tk.Tk):
 
         self.delete_measurement_delete_pid = self._add_labeled_entry(tab, "Patient ID", "• A 9 digit number\n• e.g. 208399845")
         self.delete_measurement_delete_loinc = self._add_labeled_entry(tab, "LOINC Code", "• A valid LOINC code\n• e.g. 2055-2")
+        self.delete_measurement_delete_component = self._add_labeled_entry(tab, "LOINC Component Name (optional)", "• A valid LOINC component name\n• e.g. Albumin\n• You can filter the db using this field, the LOINC-Code or both")
         self.delete_measurement_valid_time = self._add_labeled_entry(tab, "Valid Start Time", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024")
         self.delete_measurement_delete_time = self._add_labeled_entry(tab, "Deletion Time (Optional)", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024\n• Allows to delete records with past TransactionDeletionTime\n• If empty, will automatically use current date-time")
 
@@ -201,12 +205,13 @@ class Application(tk.Tk):
     def search_history(self):
         pid = self.search_patient_id.get()
         loinc = self.search_loinc.get()
+        component = self.search_component.get()
         start = self.search_start.get()
         end = self.search_end.get()
         snap = self.search_snapshot.get()
 
         try:
-            results = self.record.search_history(pid, snapshot_date=snap or None, loinc_num=loinc or None, start=start or None, end=end or None)
+            results = self.record.search_history(pid, snapshot_date=snap or None, component=component or None, loinc_num=loinc or None, start=start or None, end=end or None)
             self.search_result.configure(state='normal')  # enable editing
             self.search_result.delete("1.0", tk.END)
             if not results:
@@ -242,13 +247,16 @@ class Application(tk.Tk):
             messagebox.showerror("Error", str(e))
 
     def insert_measurement(self):
-        pid = self.update_measurement_update_pid.get()
-        valid_time = self.update_measurement_update_time.get()
-        value = self.update_measurement_update_value.get()
-        unit = self.update_measurement_update_unit.get()
-        loinc_name = self.update_measurement_update_component.get()
-        loinc_code = self.update_measurement_update_loinc.get()
-        transaction_time = self.update_measurement_update_transaction_time.get()
+        pid = self.insert_measurement_update_pid.get()
+        valid_time = self.insert_measurement_update_time.get()
+        value = self.insert_measurement_update_value.get()
+        unit = self.insert_measurement_update_unit.get()
+        loinc_name = self.insert_measurement_update_component.get()
+        loinc_code = self.insert_measurement_update_loinc.get()
+        transaction_time = self.insert_measurement_update_transaction_time.get()
+        if not transaction_time.strip():
+            transaction_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
         if loinc_code and loinc_name:
            loinc = f"{loinc_code}: {loinc_name}"
         else:
@@ -259,13 +267,7 @@ class Application(tk.Tk):
         
         try:
             self.record.insert_measurement(
-                self.insert_measurement_update_pid.get(),
-                self.insert_measurement_update_time.get(),
-                self.insert_measurement_update_value.get(),
-                self.update_measurement_update_unit.get(),
-                self.update_measurement_update_component.get(),
-                self.insert_measurement_update_loinc.get(),
-                self.insert_measurement_update_transaction_time.get()
+                pid, valid_time, value, unit, loinc_name, loinc_code, transaction_time
             )
             self.create_measurement_update_result.configure(state='normal')  # enable editing
             self.create_measurement_update_result.delete("1.0", tk.END)
@@ -285,6 +287,9 @@ class Application(tk.Tk):
         loinc_name = self.update_measurement_update_component.get()
         loinc_code = self.update_measurement_update_loinc.get()
         transaction_time = self.update_measurement_update_transaction_time.get()
+        if not transaction_time.strip():
+            transaction_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
         if loinc_code and loinc_name:
            loinc = f"{loinc_code}: {loinc_name}"
         else:
@@ -292,15 +297,10 @@ class Application(tk.Tk):
                 loinc = loinc_code
             else:
                 loinc = loinc_name
-        
+
         try:
             self.record.update_measurement(
-                self.update_measurement_update_pid.get(),
-                self.update_measurement_update_time.get(),
-                self.update_measurement_update_value.get(),
-                self.update_measurement_update_component.get(),
-                self.update_measurement_update_loinc.get(),
-                self.update_measurement_update_transaction_time.get()
+                pid, valid_time, new_value, loinc_name, loinc_code, transaction_time
             )
             self.update_measurement_update_result.configure(state='normal')  # enable editing
             # Input here the message you wish to add when record updates
@@ -316,28 +316,31 @@ class Application(tk.Tk):
             messagebox.showerror("Error", str(e))
 
     def delete_measurement(self):
-        pid = self.delete_measurement_delete_pid.get()
-        loinc_code = self.delete_measurement_delete_loinc.get()
-        valid_time = self.delete_measurement_valid_time.get()
-        deletion_time = self.delete_measurement_delete_time.get()
+            pid = self.delete_measurement_delete_pid.get()
+            loinc_code = self.delete_measurement_delete_loinc.get()
+            component_name = self.delete_measurement_delete_component.get()
+            valid_time = self.delete_measurement_valid_time.get()
+            deletion_time = self.delete_measurement_delete_time.get()
 
-        try:
-            self.record.delete_measurement(
-                self.delete_measurement_delete_pid.get(),
-                self.delete_measurement_delete_loinc.get(),
-                self.delete_measurement_valid_time.get(),
-                self.delete_measurement_delete_time.get()
-            )
-            self.delete_measurement_delete_result.configure(state='normal')  # enable editing
-            self.delete_measurement_delete_result.delete("1.0", tk.END)
-            self.delete_measurement_delete_result.insert(tk.END, "-> Patient's record deleted from the DB:\n")
-            self.delete_measurement_delete_result.insert(tk.END, f"{'ID':<12} {'Loinc-Code':<10} {'Valid Time':<20} {'Deletion Time':<20}\n")
-            self.delete_measurement_delete_result.insert(tk.END, "-" * 42 + "\n")
-            self.delete_measurement_delete_result.insert(tk.END, f"{pid:<12} {loinc_code:<10} {valid_time:<20} {deletion_time:<20}\n")
-            self.delete_measurement_delete_result.configure(state='disabled')  # disable editing again
-            messagebox.showinfo("Success", "Measurement deleted.")
-        except Exception as e:
-            messagebox.showerror("Error", str(e))
+            try:
+                deleted_row = self.record.delete_measurement(
+                    pid,
+                    loinc_code,
+                    component_name,
+                    valid_time,
+                    deletion_time
+                )
+
+                self.delete_measurement_delete_result.configure(state='normal')
+                self.delete_measurement_delete_result.delete("1.0", tk.END)
+                self.delete_measurement_delete_result.insert(tk.END, "-> Patient's record deleted from the DB:\n")
+                self.delete_measurement_delete_result.insert(tk.END, f"{'ID':<12} {'Loinc-Code':<10} {'Valid Time':<20} {'Deletion Time':<20}\n")
+                self.delete_measurement_delete_result.insert(tk.END, "-" * 70 + "\n")
+                self.delete_measurement_delete_result.insert(tk.END,f"{deleted_row[0]:<12} {deleted_row[1]:<10} {deleted_row[2]:<20} {deleted_row[3]:<20}\n")
+                self.delete_measurement_delete_result.configure(state='disabled')  # disable editing again
+            except Exception as e:
+                messagebox.showerror("Error", str(e))
+
 
 if __name__ == '__main__':
     app = Application()

@@ -7,9 +7,9 @@ WHERE rowid = (
     SELECT rowid FROM Measurements
     WHERE PatientId = ?
       AND LoincNum = ?
-      AND ValidStartTime = ?
+      AND DATE(ValidStartTime) = ?
       AND TransactionInsertionTime < ?
-      AND (TransactionDeletionTime IS NULL OR TransactionDeletionTime > ?)
-    ORDER BY TransactionInsertionTime DESC
+      AND (TransactionDeletionTime IS NULL OR DATE(TransactionDeletionTime) > ?)
+    ORDER BY DATE(TransactionInsertionTime) DESC
     LIMIT 1
 );

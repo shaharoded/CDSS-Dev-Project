@@ -5,9 +5,18 @@ Handles all patient-related operations by combining
 SQL queries and data access functions.
 
 All SQL queries are saved separately under /queries/
+
+TO-DO / THINK (to manual):
+- Should update and delete raise the matching number of concept under a specific name for action by loinc name
+     only under a specific patient and not the whole measurements (assumption that a hospital uses the same codes for same loinc names - no substring matching here).
+     Can also just drop duplicated names when loading loinc and that's that. Maybe much simpler...
+- If we have only 1 unique name per ID, maybe we can allow update and delete based on a substring, with a warning if the substring returns more than 1 result from measurements. 
+  But for insert it's risky because is a substring is too generic and does not exist in measurements but has multiple result in LOINC it will allow to insert an unknown component.
 """
 import pandas as pd
 import re
+from datetime import datetime
+
 
 # Local Code
 from backend.dataaccess import DataAccess
@@ -85,20 +94,24 @@ class PatientRecord:
         return matches  # Return ID, First Name, Last Name from DB for every matching patient by name
 
     @staticmethod
-    def search_history(patient_id, snapshot_date=None, loinc_num=None, start=None, end=None):
+    def search_history(patient_id, snapshot_date=None, loinc_num=None, component=None, start=None, end=None):
         """
         Search patient measurement history using optional filters:
         - snapshot_date: point-in-time view of the database.
         - loinc_num: filter by LOINC code.
+        - component: filter (LIKE condition) by loinc component name.
         - start/end: define a datetime window (inclusive).
         Accepts both date and datetime; if only date is given, assumes 00:00 for start and 23:59 for end.
 
         NOTE: SEARCH_HISTORY_QUERY performs a JOIN with the LOINC table.
         """
         # Input cleanup
-        for param in [patient_id, snapshot_date, loinc_num, start, end]:
-            if param:
-                param = str(param).strip()
+        patient_id = str(patient_id).strip()
+        snapshot_date = str(snapshot_date).strip()
+        loinc_num = str(loinc_num).strip()
+        component = str(component).strip()
+        start = str(start).strip()
+        end = str(end).strip()
 
         # Input validation
         if not data.check_record(CHECK_PATIENT_BY_ID_QUERY, (patient_id,)):
@@ -113,6 +126,10 @@ class PatientRecord:
         if loinc_num:
             filters.append("m.LoincNum = ?")
             params.append(loinc_num)
+        
+        if component:
+            filters.append("l.Component LIKE '%' || ? || '%'")
+            params.append(component)
 
         # Handle datetime range
         if start:
@@ -184,11 +201,25 @@ class PatientRecord:
         """
         # Input cleanup
         patient_id = str(patient_id).strip()
-        loinc_num = str(loinc_num).strip()
+        loinc_num = str(loinc_num).strip() if loinc_num else None
+        component = str(component).strip() if component else None
         value = str(value).strip()
         unit = str(unit).strip()
         valid_start_time = str(valid_start_time).strip()
-        transaction_time = str(transaction_time).strip() if transaction_time else transaction_time
+        if transaction_time:
+            transaction_time = validate_datetime(transaction_time).strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            transaction_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        # Mandatory fields check
+        if not patient_id:
+            raise ValueError("Patient ID must be provided and cannot be empty.")
+        if not value:
+            raise ValueError("Measurement value must be provided and cannot be empty.")
+        if not unit:
+            raise ValueError("Measurement unit must be provided and cannot be empty.")
+        if not valid_start_time:
+            raise ValueError("Measurement valid start time must be provided and cannot be empty.")
 
         # Verify input
         if not data.check_record(CHECK_PATIENT_BY_ID_QUERY, (patient_id,)):
@@ -203,7 +234,7 @@ class PatientRecord:
         
         # CASE 2: Only Component provided → look up LOINC code
         elif component and not loinc_num:
-            loinc_num = data.get_attr(GET_LOINC_BY_COMPONENT_QUERY, (component,))
+            loinc_num = str(data.get_attr(GET_LOINC_BY_COMPONENT_QUERY, (component,))).strip()
             if not loinc_num:
                 raise ValueError(f"No LOINC code found for component '{component}' in LOINC table. Check the LOINC repository to fetch the correct code / name of the intended concept.")
         
@@ -239,12 +270,24 @@ class PatientRecord:
         """
         # Input cleanup
         patient_id = str(patient_id).strip()
-        loinc_num = str(loinc_num).strip()
+        loinc_num = str(loinc_num).strip() if loinc_num else None
+        component = str(component).strip() if component else None
         valid_start_time = str(valid_start_time).strip()
         new_value = str(new_value).strip()
-        transaction_time = str(transaction_time).strip() if transaction_time else transaction_time
-        
+        if transaction_time:
+            transaction_time = validate_datetime(transaction_time).strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            transaction_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
         # Verify input
+        if not patient_id:
+            raise ValueError("Patient ID must be provided and cannot be empty.")
+        if not valid_start_time:
+            raise ValueError("Measurement valid start time must be provided and cannot be empty.")
+        if not new_value:
+            raise ValueError("Measurement new value must be provided and cannot be empty.")
+        
+
         if not data.check_record(CHECK_PATIENT_BY_ID_QUERY, (patient_id,)):
             raise PatientNotFound("Patient not found")
 
@@ -253,14 +296,15 @@ class PatientRecord:
             loinc_num_1 = loinc_num
             loinc_num_2 = str(data.get_attr(GET_LOINC_BY_COMPONENT_QUERY, (component,))).strip()
             if not loinc_num_1 == loinc_num_2:
-                raise ValueError(f"LOINC code '{loinc_num_1}' and component '{component}' do not match. The input component returned Loinc-Code={loinc_num_2}. Check the LOINC repository to fetch the correct code / name of the intended concept.")
-        
+                raise ValueError(
+                    f"LOINC code '{loinc_num_1}' and component '{component}' do not match. The input component returned Loinc-Code={loinc_num_2}. Check the LOINC repository to fetch the correct code / name of the intended concept.")
+
         # CASE 2: Only Component provided → look up LOINC code
         elif component and not loinc_num:
-            loinc_num = data.get_attr(GET_LOINC_BY_COMPONENT_QUERY, (component,))
+            loinc_num = str(data.get_attr(GET_LOINC_BY_COMPONENT_QUERY, (component,))).strip()
             if not loinc_num:
                 raise ValueError(f"No LOINC code found for component '{component}' in LOINC table. Check the LOINC repository to fetch the correct code / name of the intended concept.")
-        
+
         # CASE 3: Only LOINC-Code provided → continue as usual
         elif loinc_num:
             if not data.check_record(CHECK_LOINC_QUERY, (loinc_num,)):
@@ -278,12 +322,12 @@ class PatientRecord:
 
         # In case transaction_time is not the most updated TransactionInsertionTime for this record, get the TransactionDeletionDate for it
         # deletion_date can be None
-        future_record_date = data.get_attr(CHECK_FUTURE_RECORD_QUERY, (patient_id, loinc_num, valid_start_time, transaction_time))
+        future_record_date = str(data.get_attr(CHECK_FUTURE_RECORD_QUERY, (patient_id, loinc_num, valid_start_time, transaction_time))).strip()
         if future_record_date:
             raise ValueError(f"This record has a newer update from {future_record_date} and cannot be updated to an unupdated version.")
         
         # Fetch the unit from existing records
-        unit = data.get_attr(GET_EXISTING_UNIT_QUERY, (patient_id, loinc_num, valid_start_time))
+        unit = str(data.get_attr(GET_EXISTING_UNIT_QUERY, (patient_id, loinc_num, valid_start_time))).strip()
         # No exception in case non found, as that's the reflection of this concept in the DB.
 
         # Insert the new measurement row
@@ -294,36 +338,73 @@ class PatientRecord:
 
         # Update end time on older records
         data.execute_query(
-            UPDATE_OLD_RECORDS_QUERY,
+            UPDATE_DELETION_TIME_QUERY,
             (transaction_time, patient_id, loinc_num, valid_start_time, transaction_time, transaction_time)
         )
 
     @staticmethod
-    def delete_measurement(patient_id, loinc_num, valid_start_time, deletion_time=None):
+    def delete_measurement(patient_id, loinc_num=None, component=None, valid_start_time=None, deletion_time=None):
         """
-        Delete a specific measurement.
+        Logically deletes a measurement (sets TransactionDeletionTime).
 
-        - Use CHECK_PATIENT_QUERY to verify existence.
-        - Delete using DELETE_MEASUREMENT_QUERY.
-        - Handle edge cases: no matching record.
+        - Uses LOINC code or component name to identify the measurement.
+        - Verifies that the record isn't already deleted.
+        - Returns the record before deletion for confirmation.
         """
         # Input cleanup
         patient_id = str(patient_id).strip()
         loinc_num = str(loinc_num).strip()
+        component = str(component).strip()
         valid_start_time = str(valid_start_time).strip()
         deletion_time = str(valid_start_time).strip() if deletion_time else deletion_time
-        
-        # Verify input
+
+        # Validate patient
         if not data.check_record(CHECK_PATIENT_BY_ID_QUERY, (patient_id,)):
             raise PatientNotFound("Patient not found")
-        if not data.check_record(CHECK_LOINC_QUERY, (loinc_num,)):
-            raise LoincCodeNotFound("Loinc code not found")
-        valid_start_time = validate_datetime(valid_start_time).strftime('%Y-%m-%d %H:%M:%S')
-        if not data.check_record(CHECK_RECORD_QUERY, (patient_id, loinc_num, valid_start_time, deletion_time)):
-            raise RecordNotFound("This record was not found in the DB")
+
+        # CASE 1: Both LOINC and Component provided → check match
+        if loinc_num and component:
+            loinc_num_1 = loinc_num
+            loinc_num_2 = str(data.get_attr(GET_LOINC_BY_COMPONENT_QUERY, (component,))).strip()
+            if not loinc_num_1 == loinc_num_2:
+                raise ValueError(f"LOINC code '{loinc_num_1}' and component '{component}' do not match. The input component returned Loinc-Code={loinc_num_2}. Check the LOINC repository to fetch the correct code / name of the intended concept.")
+
+        # CASE 2: Only Component provided → look up LOINC code
+        if not loinc_num and component:
+            loinc_num = str(data.get_attr(GET_LOINC_BY_COMPONENT_QUERY, (component,))).strip()
+            if not loinc_num:
+                raise ValueError(f"No LOINC code found for component '{component}'")
         
-        # Continue from here
-        raise NotImplementedError("Update measurement not implemented yet")
+        # CASE 3: Only LOINC-Code provided → continue as usual
+        elif loinc_num:
+            loinc_num = str(loinc_num).strip()
+            if not data.check_record(CHECK_LOINC_QUERY, (loinc_num,)):
+                raise LoincCodeNotFound("Loinc code not found")
+        
+        else:
+            raise ValueError("You must provide at least a LOINC code or a component name in order to update a measurement.")
+
+        # If only a date was given, get the latest ValidStartTime on that date
+        if len(valid_start_time) <= 10:
+            date_only = validate_datetime(valid_start_time).strftime('%Y-%m-%d')
+            valid_start_time = str(data.get_attr(GET_LATEST_VALIDTIME_FOR_DAY_QUERY, (patient_id, loinc_num, date_only))).strip()
+            if not valid_start_time:
+                raise RecordNotFound(f"No measurement found for patient {patient_id} on {date_only} for LOINC-Code {loinc_num}. Be sure that the record was not deleted in TransactionDeletionTime.")
+
+        if deletion_time:
+            deletion_time = validate_datetime(deletion_time).strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            deletion_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        # Check if record exists in the desired snapshot. One cannot delete an already deleted record at past time.
+        if not data.check_record(CHECK_RECORD_QUERY, (patient_id, loinc_num, valid_start_time, deletion_time)):
+            raise RecordNotFound("This record was not found in the DB, at the date you wish to delete it.")
+
+        # Update end time on older records
+        data.execute_query(
+            UPDATE_DELETION_TIME_QUERY,
+            (deletion_time, patient_id, loinc_num, valid_start_time, deletion_time, deletion_time)
+        )
     
 
 if __name__ == "__main__":

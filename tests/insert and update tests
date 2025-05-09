@@ -1,0 +1,501 @@
+if __name__ == "__main__":
+    import sys
+
+    print("🔍 Running business logic tests...")
+
+    record = PatientRecord()
+
+"""    try:
+        first_name, last_name = "Eyal", "Rothman"
+        print("\n🧪 Test 1: Get patient by name (should succeed)...")
+        result = record.get_patient_by_name(first_name, last_name)
+        for r in result:
+            print(f"✅ Found: ID={r[0]}, FirstName={r[1]}, LastName={r[2]}")
+    except Exception as e:
+        print(f"❌ Test 1 failed: {e}")
+        print("Testing raw fetch...")
+        rows = data.fetch_records(CHECK_PATIENT_BY_NAME_QUERY, (first_name, last_name))
+        print("Result from DB:", rows)
+        if not rows:
+            rows = data.fetch_records('SELECT * FROM Patients', ())
+            print("All patients from DB:", rows)
+        sys.exit(1)
+
+    try:
+        print("\n🧪 Test 2: Search history with snapshot and range...")
+        history = record.search_history(
+            patient_id="345678904",
+            snapshot_date="01/01/2024 12:00",
+            start="01/01/2000",
+            end="02/01/2023"
+        )
+        print(f"✅ Found {len(history)} records")
+        for row in history:
+            print("   ", row)
+    except Exception as e:
+        print(f"❌ Test 2 failed: {e}")
+        sys.exit(1)
+
+    try:
+        print("\n🧪 Test 3: Register a new patient (should succeed or fail if already exists)...")
+        record.register_patient("208388918", "Shahar", "Oded")
+        print("✅ Registered patient successfully")
+    except Exception as e:
+        print(f"❌ Test 3 failed: {e}")
+        sys.exit(1)
+
+    try:
+        print("\n🧪 Test 4: Insert measurement (should validate and insert)...")
+        record.insert_measurement(
+            patient_id="123456782",
+            loinc_num="718-7",
+            value="14.2",
+            unit="mmol/L",
+            valid_start_time="01/04/2024 08:00",
+            transaction_time="01/04/2024 08:01"
+        )
+        print("✅ Inserted measurement")
+    except Exception as e:
+        print(f"❌ Test 4 failed: {e}")
+        sys.exit(1)
+
+    print("\n✅ All tests completed successfully!")"""
+"""try:
+    print("\n🧪 Test: Insert and then search history (should retrieve the inserted measurement)...")
+    record.insert_measurement(
+        patient_id="123456782",
+        loinc_num="718-7",
+        value="15.0",
+        unit="mmol/L",
+        valid_start_time="01/05/2024 08:00",
+        transaction_time="01/05/2024 08:01"
+    )
+    history = record.search_history(
+        patient_id="123456782",
+        snapshot_date="02/01/2025 12:00",
+        start="01/01/2020",
+        end="01/06/2024"
+    )
+    assert any("15.0" in str(row) for row in history), "Inserted measurement not found in history"
+    print("✅ Inserted measurement found in history")
+except Exception as e:
+    print(f"❌ Test failed: {e}")"""
+
+# ------------register_patient------------
+try:
+    print("\n🧪 Test: Register same patient twice (should fail)...")
+    record.register_patient("208388918", "Shahar", "Oded")
+    record.register_patient("208388918", "Shahar", "Oded")
+    print("❌ Should have failed but succeeded!")
+except Exception as e:
+    print(f"✅ Correctly failed: {e}")
+
+try:
+    print("\n🧪 Test: Register patient with missing first name (should fail)...")
+    record.register_patient("208388919", "", "Oded")
+    print("❌ Should have failed but succeeded!")
+except Exception as e:
+    print(f"✅ Correctly failed: {e}")
+
+#record.register_patient("211805304", "Erica", "Rusonik")
+
+# ------------insert_test------------
+try:
+    print("\n🧪 Test: Insert measurement for non-existent patient (should fail)...")
+    record.insert_measurement(
+        patient_id="999999999",  # non-existent
+        loinc_num="718-7",
+        value="14.2",
+        unit="mmol/L",
+        valid_start_time="01/04/2024 08:00",
+        transaction_time="01/04/2024 08:01"
+    )
+    print("❌ Should have failed but succeeded!")
+except Exception as e:
+    print(f"✅ Correctly failed: {e}")
+
+try:
+    print("\n🧪 Test: Insert measurement with invalid LOINC code (should fail)...")
+    record.insert_measurement(
+        patient_id="123456782",
+        loinc_num="INVALID",
+        value="14.2",
+        unit="mmol/L",
+        valid_start_time="01/04/2024 08:00",
+        transaction_time="01/04/2024 08:01"
+    )
+    print("❌ Should have failed but succeeded!")
+except Exception as e:
+    print(f"✅ Correctly failed: {e}")
+
+try:
+    print("\n🧪 Test: Insert measurement with bad date format (should fail)...")
+    record.insert_measurement(
+        patient_id="123456782",
+        loinc_num="718-7",
+        value="14.2",
+        unit="mmol/L",
+        valid_start_time="bad-date",
+        transaction_time="also-bad"
+    )
+    print("❌ Should have failed but succeeded!")
+except Exception as e:
+    print(f"✅ Correctly failed: {e}")
+
+try:
+    print("\n🧪 Test: Insert measurement with future valid_start_time (policy-dependent)...")
+    record.insert_measurement(
+        patient_id="123456782",
+        loinc_num="718-7",
+        value="16.0",
+        unit="mmol/L",
+        valid_start_time="01/01/2100 08:00",
+        transaction_time="01/01/2100 08:01"
+    )
+    print("✅ Inserted future-dated measurement (check if allowed by system)")
+except Exception as e:
+    print(f"✅ Correctly blocked future date: {e}")
+
+try:
+    print("\n🧪 Test: Insert measurement with only component name (should succeed or fail)...")
+    record.insert_measurement(
+        patient_id="123456782",
+        loinc_num="",  # Empty LOINC number
+        value="7.5",
+        unit="mmol/L",
+        valid_start_time="05/05/2024 10:00",
+        transaction_time="05/05/2024 10:01",
+        component="Glucose"
+    )
+    print("✅ Inserted using only component name (check if system resolved LOINC or accepted it)")
+except Exception as e:
+    print(f"✅ Correctly failed or blocked: {e}")
+
+try:
+    print("\n🧪 Test: Insert measurement with component name + LOINC number (should succeed)...")
+    record.insert_measurement(
+        patient_id="123456782",
+        loinc_num="76477-9",  # Example: glucose LOINC
+        value="7.8",
+        unit="mmol/L",
+        valid_start_time="06/05/2024 10:00",
+        transaction_time="06/05/2024 10:01",
+        component="Heart rate"
+    )
+    print("✅ Inserted using component name + LOINC number")
+except Exception as e:
+    print(f"❌ Test failed: {e}")
+
+
+    print("\n🧪 Test: Insert same measurement again (should fail as duplicate)...")
+    try:
+        record.insert_measurement(
+            patient_id=patient_id,
+            loinc_num=loinc_num,
+            component=component,
+            value=value,
+            unit=unit,
+            valid_start_time=valid_start_time,
+            transaction_time=transaction_time
+        )
+        print("❌ Should have failed but succeeded!")
+    except Exception as e:
+        print(f"✅ Correctly blocked duplicate: {e}")
+
+    print("\n🧪 Test: Insert same measurement with DIFFERENT transaction time (should fail)...")
+    try:
+        record.insert_measurement(
+            patient_id=patient_id,
+            loinc_num=loinc_num,
+            component=component,
+            value=value,
+            unit=unit,
+            valid_start_time=valid_start_time,
+            transaction_time="07/05/2024 10:02"  # new transaction time
+        )
+        print("❌ Should have failed but succeeded!")
+    except Exception as e:
+        print(f"✅ Correctly blocked duplicate with different transaction time: {e}")
+
+    print("\n🧪 Test: Insert same measurement with DIFFERENT value (should fail)...")
+    try:
+        record.insert_measurement(
+            patient_id=patient_id,
+            loinc_num=loinc_num,
+            component=component,
+            value="8.2",  # new value
+            unit=unit,
+            valid_start_time=valid_start_time,
+            transaction_time="07/05/2024 10:03"
+        )
+        print("❌ Should have failed but succeeded!")
+    except Exception as e:
+        print(f"✅ Correctly blocked duplicate with different value: {e}")
+
+    print("\n🧪 Test: Insert same measurement with ONLY component, no loinc_num (should fail if mismatch or succeed if matched)...")
+    try:
+        record.insert_measurement(
+            patient_id=patient_id,
+            loinc_num="",  # empty loinc_num
+            component=component,
+            value="8.5",
+            unit=unit,
+            valid_start_time=valid_start_time,
+            transaction_time="07/05/2024 10:04"
+        )
+        print("✅ Insert with only component succeeded (depends on system design)")
+    except Exception as e:
+        print(f"✅ Correctly handled component-only case: {e}")
+
+except Exception as e:
+    print(f"❌ Setup failed: {e}")
+try:
+    print("\n🧪 Test: Insert measurement with missing unit (should fail)...")
+    record.insert_measurement(
+        patient_id="123456782",
+        loinc_num="718-7",
+        value="14.2",
+        unit="",  # intentionally empty
+        valid_start_time="08/05/2024 10:00",
+        transaction_time="08/05/2024 10:01"
+    )
+    print("❌ Should have failed but succeeded!")
+except Exception as e:
+    print(f"✅ Correctly failed: {e}")
+try:
+    print("\n🧪 Test: Insert duplicate component with mismatched LOINC (should fail)...")
+    record.insert_measurement(
+        patient_id="123456782",
+        loinc_num="14743-9",  # e.g., Glucose
+        component="Heart rate",  # mismatched intentionally
+        value="7.8",
+        unit="mmol/L",
+        valid_start_time="08/05/2024 11:00",
+        transaction_time="08/05/2024 11:01"
+    )
+    print("❌ Should have failed but succeeded!")
+except Exception as e:
+    print(f"✅ Correctly blocked mismatched component/LOINC: {e}")
+try:
+    print("\n🧪 Test: Insert measurement with invalid patient ID format (should fail)...")
+    record.insert_measurement(
+        patient_id="ABC123XYZ",  # invalid format, should be numeric
+        loinc_num="718-7",
+        value="14.2",
+        unit="mmol/L",
+        valid_start_time="08/05/2024 12:00",
+        transaction_time="08/05/2024 12:01"
+    )
+    print("❌ Should have failed but succeeded!")
+except Exception as e:
+    print(f"✅ Correctly failed on invalid patient ID: {e}")
+
+# ------------update_test------------
+# ===================== INPUT VALIDATION TESTS =====================
+
+# 1️⃣ Nonexistent Patient ID
+print("\n🧪 Test 1: Update nonexistent patient (should fail)...")
+try:
+    record.update_measurement(
+        patient_id="999999999",  # non-existent
+        valid_start_time="01/04/2024 08:00",
+        new_value="15.0",
+        loinc_num="718-7"
+    )
+    print("❌ Should have failed but succeeded!")
+except Exception as e:
+    print(f"✅ Correctly failed: {e}")
+
+# 2️⃣ Invalid Patient ID Format
+print("\n🧪 Test 2: Update with invalid patient ID format (should fail)...")
+try:
+    record.update_measurement(
+        patient_id="abc123",
+        valid_start_time="01/04/2024 08:00",
+        new_value="15.0",
+        loinc_num="718-7"
+    )
+    print("❌ Should have failed but succeeded!")
+except Exception as e:
+    print(f"✅ Correctly failed: {e}")
+
+# 3️⃣ Invalid Date Format
+print("\n🧪 Test 3: Update with invalid date format (should fail)...")
+try:
+    record.update_measurement(
+        patient_id="123456782",
+        valid_start_time="bad-date",
+        new_value="15.0",
+        loinc_num="718-7"
+    )
+    print("❌ Should have failed but succeeded!")
+except Exception as e:
+    print(f"✅ Correctly failed: {e}")
+
+# 4️⃣ Missing Required Parameters
+print("\n🧪 Test 4: Update with missing value (should fail)...")
+try:
+    record.update_measurement(
+        patient_id="123456782",
+        valid_start_time="01/04/2024 08:00",
+        new_value="",
+        loinc_num="718-7"
+    )
+    print("❌ Should have failed but succeeded!")
+except Exception as e:
+    print(f"✅ Correctly failed: {e}")
+
+# 5️⃣ Mismatched LOINC + Component
+print("\n🧪 Test 5: Update with mismatched LOINC and component (should fail)...")
+try:
+    record.update_measurement(
+        patient_id="123456782",
+        valid_start_time="01/04/2024 08:00",
+        new_value="15.0",
+        loinc_num="718-7",
+        component="Heart rate"
+    )
+    print("❌ Should have failed but succeeded!")
+except Exception as e:
+    print(f"✅ Correctly failed: {e}")
+
+# 6️⃣ Component Only (Valid Name)
+print("\n🧪 Test 6: Update using only valid component name (should succeed)...")
+try:
+    record.update_measurement(
+        patient_id="123456782",
+        valid_start_time="17/05/2018  18:57:00",
+        new_value="10",
+        component="Hemoglobin",
+        loinc_num=None,
+        transaction_time=""
+    )
+    print("✅ Test 6 passed: Updated successfully using component name")
+except Exception as e:
+    print(f"❌ Test 6 failed: {e}")
+
+# 7️⃣ LOINC Only (Valid Number)
+print("\n🧪 Test 7: Update using only valid LOINC number (should succeed)...")
+try:
+    record.update_measurement(
+        patient_id="123456782",
+        valid_start_time="2018-05-18 03:00:00",
+        new_value="120",
+        loinc_num="14743-9",
+        component=None,
+        transaction_time="2018-05-22 10:00:00"
+    )
+    print("✅ Test 7 passed: Updated successfully using LOINC number")
+except Exception as e:
+    print(f"❌ Test 7 failed: {e}")
+
+# 8️⃣ Component + LOINC Together (Match)
+print("\n🧪 Test 8: Update using matching component + LOINC (should succeed)...")
+try:
+    record.update_measurement(
+        patient_id="123456782",
+        valid_start_time="2018-05-18 03:00:00",
+        new_value="120",
+        component="Glucose",
+        loinc_num="14743-9",
+        transaction_time="2018-05-22 10:00:00"
+    )
+    print("✅ Test 8 passed: Updated successfully using component + LOINC")
+except Exception as e:
+    print(f"❌ Test 8 failed: {e}")
+
+# 9️⃣ Component + LOINC Together (Mismatch)
+print("\n🧪 Test 9: Update using mismatched component + LOINC (should fail)...")
+try:
+    record.update_measurement(
+        patient_id="123456782",
+        valid_start_time="01/04/2024 08:00",
+        new_value="15.0",
+        component="Heart rate",
+        loinc_num="718-7"
+    )
+    print("❌ Should have failed but succeeded!")
+except Exception as e:
+    print(f"✅ Correctly failed: {e}")
+
+print("\n🧪 Test 10: Update non-existent record (should fail)...")
+try:
+    record.update_measurement(
+        patient_id="123456782",  # non-existent patient or wrong combo
+        valid_start_time="17/05/2018  18:57:00",
+        new_value="5.0",
+        loinc_num="718-7",  # example valid LOINC, but patient+date combo doesn't exist
+        component=None,
+        transaction_time=""
+    )
+    print("❌ Test 10 failed: Should have raised RecordNotFound but succeeded!")
+except RecordNotFound as e:
+    print(f"✅ Test 10 passed: Correctly raised RecordNotFound → {e}")
+except Exception as e:
+    print(f"❌ Test 10 failed: Raised unexpected error → {e}")
+
+print("\n🧪 Test 11: Update with older transaction time (should fail)...")
+try:
+    patient_id = "123456782"
+    valid_start_time = "17/05/2018 18:57:00"
+    loinc_num = "30313-1"
+    new_value = "9.0"
+    old_transaction_time = "17/05/2018 18:58:00"  # deliberately older
+
+    record.update_measurement(
+        patient_id=patient_id,
+        valid_start_time=valid_start_time,
+        new_value=new_value,
+        loinc_num=loinc_num,
+        component=None,
+        transaction_time=old_transaction_time
+    )
+    print("❌ Test 11 failed: Should have blocked older update but succeeded!")
+except ValueError as e:
+    print(f"✅ Test 11 passed: Correctly blocked older update → {e}")
+except Exception as e:
+    print(f"❌ Test 11 failed: Raised unexpected error → {e}")
+
+print("\n🧪 Test 12: Insert new patient → insert measurement → update measurement (should succeed)...")
+
+try:
+    # Step 1: Insert a new patient
+    new_patient_id = "301234567"
+    record.register_patient(new_patient_id, "TestFirst", "TestLast")
+    print("✅ Inserted new patient")
+
+    # Step 2: Insert a new measurement
+    loinc_num = "30313-1"  # Hemoglobin example
+    initial_value = "12.5"
+    unit = "g/dL"
+    valid_start_time = "10/05/2024 09:00"
+    transaction_time_insert = "10/05/2024 09:01"
+
+    record.insert_measurement(
+        patient_id=new_patient_id,
+        loinc_num=loinc_num,
+        value=initial_value,
+        unit=unit,
+        valid_start_time=valid_start_time,
+        transaction_time=transaction_time_insert
+    )
+    print("✅ Inserted new measurement")
+
+    # Step 3: Update the measurement with a new value + new transaction time
+    new_value = "13.2"
+    transaction_time_update = "10/05/2024 09:05"
+
+    record.update_measurement(
+        patient_id=new_patient_id,
+        valid_start_time=valid_start_time,
+        new_value=new_value,
+        loinc_num=loinc_num,
+        component=None,
+        transaction_time=transaction_time_update
+    )
+    print("✅ Successfully updated measurement with new value")
+
+except Exception as e:
+    print(f"❌ Test 12 failed: {e}")
+
+from datetime import datetime

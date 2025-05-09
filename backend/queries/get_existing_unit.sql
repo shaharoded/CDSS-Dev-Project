@@ -4,6 +4,6 @@
 
 SELECT Unit
 FROM Measurements
-WHERE PatientId = ? AND LoincNum = ? AND ValidStartTime = ?
-ORDER BY TransactionInsertionTime DESC
+WHERE PatientId = ? AND LoincNum = ? AND DATE(ValidStartTime) = ?
+ORDER BY DATE(TransactionInsertionTime) DESC
 LIMIT 1;
