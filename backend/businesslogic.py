@@ -5,12 +5,6 @@ Handles all patient-related operations by combining
 SQL queries and data access functions.
 
 All SQL queries are saved separately under /queries/
-
-TO-DO / THINK (to manual):
-- Update and delete currently suggest you the LOINC codes relevant for the person if you try action by LOINC name, 
-    but it will refer to action by loinc code if name is not unique. Insert will do the same but for all of the LOINC table. 
-- Currently there is no suggestion of loinc name when a substring is inserted. Not sure we can create something like this properly.
-- During measure insersion we are not checking that the inserted record does not already exists and are not blocking insersions of the same loinc_num at the same time (probably better)
 """
 import pandas as pd
 import re
