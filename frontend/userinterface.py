@@ -326,7 +326,8 @@ class Application(tk.Tk):
                 deletion_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
             try:
-                self.record.delete_measurement(
+                # Using the inferred valid_time for screen
+                valid_time = self.record.delete_measurement(
                     pid,
                     valid_time,
                     loinc_code,

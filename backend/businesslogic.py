@@ -396,9 +396,19 @@ class PatientRecord:
 
         # Validate and process dates
         # If only a date was given, get the latest ValidStartTime on that date
+        # Resolve using either loinc_num or component - Whatever is available.
         if len(valid_start_time) <= 10:
             input_date = validate_datetime(valid_start_time).strftime('%Y-%m-%d') # Allow date to be date only, not ISO, as requested.
-            result = data.get_attr(GET_LATEST_VALIDTIME_FOR_DAY_QUERY, (patient_id, loinc_num, input_date, deletion_time))
+            result = data.get_attr(
+                GET_LATEST_VALIDTIME_FOR_DAY_QUERY, 
+                (
+                    patient_id, 
+                    valid_start_time, 
+                    deletion_time, 
+                    loinc_num, loinc_num,
+                    component, component
+                    )
+                )
             if not result:
                 raise RecordNotFound(f"No measurement found for patient {patient_id} on {input_date} for LOINC-Code {loinc_num}. Be sure that the record was not deleted in TransactionDeletionTime.")
             valid_start_time = str(validate_datetime(result).strftime('%Y-%m-%d %H:%M:%S')).strip()
@@ -458,6 +468,8 @@ class PatientRecord:
             UPDATE_DELETION_TIME_QUERY,
             (patient_id, loinc_num, valid_start_time, deletion_time, deletion_time, deletion_time)
         )
+
+        return valid_start_time # returning the actual record deleted for logging on screen
     
 
 if __name__ == "__main__":
@@ -526,7 +538,7 @@ if __name__ == "__main__":
     try:
         print("\n🧪 Test 5: update measurement...")
         # query = """
-        #         DELETE FROM Measurements WHERE PatientId=208388918 AND ValidStartTime='2025-05-01 12:00:00'
+        #         DELETE FROM Measurements WHERE PatientId=208388918
         #         """
         # res = data.execute_query(query, ())
         query = """
