@@ -32,6 +32,7 @@ SEARCH_HISTORY_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_his
 UPDATE_MEASUREMENT_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'update_measurement.sql') # In-place value update, currently irrelevant.
 UPDATE_DELETION_TIME_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'update_record_deletion_time.sql')
 GET_EXISTING_UNIT_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_existing_unit.sql')
-GET_LOINC_BY_COMPONENT_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_loinc_by_component.sql')
+GET_LOINC_BY_COMPONENT_FL_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_loinc_by_component_from_loinc.sql')
+GET_LOINC_BY_COMPONENT_FM_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_loinc_by_component_from_measurements.sql')
 GET_LATEST_VALIDTIME_FOR_DAY_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'select_latest_validtime_for_day.sql')
 

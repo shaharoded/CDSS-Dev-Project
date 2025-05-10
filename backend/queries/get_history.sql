@@ -12,4 +12,4 @@ SELECT m.LoincNum,
 FROM Measurements m
 JOIN Loinc l ON m.LoincNum = l.LoincNum
 WHERE {where_clause}
-ORDER BY DATE(m.ValidStartTime) ASC;
+ORDER BY m.ValidStartTime ASC

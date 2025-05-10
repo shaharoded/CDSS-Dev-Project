@@ -2,7 +2,7 @@
 -- Such case enforces us to input the new record with a TransactionDeleteTime, and will be rejected.
 -- This query will return said time
 
-SELECT MAX(DATE(TransactionInsertionTime))
+SELECT MAX(TransactionInsertionTime)
 FROM Measurements
-WHERE PatientId = ? AND LoincNum = ? AND DATE(ValidStartTime) = ?
-  AND DATE(TransactionInsertionTime) > ?
+WHERE PatientId = ? AND LoincNum = ? AND ValidStartTime = ?
+  AND TransactionInsertionTime > ?;

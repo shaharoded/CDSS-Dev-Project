@@ -3,6 +3,6 @@
 
 SELECT 1 
 FROM Measurements 
-WHERE PatientId = ? AND LoincNum = ? AND DATE(ValidStartTime) = ?
-AND (TransactionDeletionTime IS NULL OR DATE(TransactionDeletionTime) > ?)  -- and ends after insert time (or still open)
+WHERE PatientId = ? AND LoincNum = ? AND ValidStartTime = ?
+AND (TransactionDeletionTime IS NULL OR TransactionDeletionTime > ?)  -- and ends after insert time (or still open)
 LIMIT 1;
