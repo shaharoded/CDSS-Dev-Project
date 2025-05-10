@@ -7,11 +7,10 @@ SQL queries and data access functions.
 All SQL queries are saved separately under /queries/
 
 TO-DO / THINK (to manual):
-- Should update and delete raise the matching number of concept under a specific name for action by loinc name
-     only under a specific patient and not the whole measurements (assumption that a hospital uses the same codes for same loinc names - no substring matching here).
-     Can also just drop duplicated names when loading loinc and that's that. Maybe much simpler...
-- If we have only 1 unique name per ID, maybe we can allow update and delete based on a substring, with a warning if the substring returns more than 1 result from measurements. 
-  But for insert it's risky because is a substring is too generic and does not exist in measurements but has multiple result in LOINC it will allow to insert an unknown component.
+- Update and delete currently suggest you the LOINC codes relevant for the person if you try action by LOINC name, 
+    but it will refer to action by loinc code if name is not unique. Insert will do the same but for all of the LOINC table. 
+- Currently there is no suggestion of loinc name when a substring is inserted. Not sure we can create something like this properly.
+- During measure insersion we re not checking that the inserted record does not already exists and are not blocking insersions of the same loinc_num at the same time (probably better)
 """
 import pandas as pd
 import re
@@ -43,7 +42,7 @@ def validate_datetime(dt_string):
     if dt_string is not None:
         try:
             # If ISO format, don't use dayfirst
-            if re.match(r"^\d{4}-\d{2}-\d{2}", dt_string):
+            if re.match(r"^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2})?$", dt_string):
                 return pd.to_datetime(dt_string, dayfirst=False)
             else:
                 return pd.to_datetime(dt_string, dayfirst=True)
@@ -111,21 +110,17 @@ class PatientRecord:
         """
         # Input cleanup
         patient_id = str(patient_id).strip()
-        snapshot_date = str(snapshot_date).strip() if snapshot_date else None
         loinc_num = str(loinc_num).strip() if loinc_num else None
         component = str(component).strip() if component else None
         start = str(start).strip() if start else None
         end = str(end).strip() if end else None
-
-        if snapshot_date:
-            snapshot_date = validate_datetime(snapshot_date).strftime('%Y-%m-%d %H:%M:%S')
-        else:
-            snapshot_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        snapshot_date = str(snapshot_date).strip() if snapshot_date else None
         
         # Input validation
         if not data.check_record(CHECK_PATIENT_BY_ID_QUERY, (patient_id,)):
             raise PatientNotFound("Patient not found")
         validate_dates_relation(start, end, 'Start Date', 'End Date')
+        validate_dates_relation(start, snapshot_date, 'Start Date', 'Snapshot Date')
         validate_dates_relation(end, snapshot_date, 'End Date', 'Snapshot Date')
 
         # Initialize dynamic filters
@@ -147,19 +142,23 @@ class PatientRecord:
             params.append(start_iso.strftime('%Y-%m-%d %H:%M:%S'))
 
         if end:
-            if len(end.strip()) <= 10:  # format like 'YYYY-MM-DD' -> No time
+            if len(end) <= 10:  # format like 'YYYY-MM-DD' -> No time
                 end_dt = validate_datetime(end)
                 end_iso = end_dt.replace(hour=23, minute=59, second=59)
             else:
-                end_dt = validate_datetime(end)
-                end_iso = end_dt
+                end_iso = validate_datetime(end)
             filters.append("m.ValidStartTime <= ?")
             params.append(end_iso.strftime('%Y-%m-%d %H:%M:%S'))
 
         # Snapshot logic
         if snapshot_date:
-            # Convert to ISO format
-            snapshot_date = validate_datetime(snapshot_date)
+            if len(snapshot_date) <= 10: # format like 'YYYY-MM-DD' -> No time
+               snapshot_date = validate_datetime(snapshot_date)
+               snapshot_date = snapshot_date.replace(hour=23, minute=59, second=59)
+            else:
+               snapshot_date = validate_datetime(snapshot_date) 
+                
+            # Convert to ISO format and extend query
             snapshot_iso = snapshot_date.strftime('%Y-%m-%d %H:%M:%S')
             filters.append("m.TransactionInsertionTime <= ?")
             filters.append("(m.TransactionDeletionTime IS NULL OR m.TransactionDeletionTime > ?)")
@@ -215,10 +214,12 @@ class PatientRecord:
         value = str(value).strip()
         unit = str(unit).strip()
         valid_start_time = str(valid_start_time).strip()
-        if transaction_time:
-            transaction_time = validate_datetime(transaction_time).strftime('%Y-%m-%d %H:%M:%S')
-        else:
-            transaction_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        transaction_time = str(transaction_time).strip() if transaction_time else datetime.now()
+
+        # Validate dates
+        valid_start_time = validate_datetime(valid_start_time).strftime('%Y-%m-%d %H:%M:%S')
+        transaction_time = validate_datetime(transaction_time).strftime('%Y-%m-%d %H:%M:%S')
+        validate_dates_relation(valid_start_time, transaction_time, 'Valid Start Date', 'Transaction Insertion Time')
 
         # Mandatory fields check
         if not patient_id:
@@ -258,11 +259,6 @@ class PatientRecord:
                 raise LoincCodeNotFound("LOINC code not found in LOINC table.")
         else:
             raise ValueError("You must provide at least a LOINC code or a component name in order to update a measurement.")
-        
-        
-        valid_start_time = validate_datetime(valid_start_time).strftime('%Y-%m-%d %H:%M:%S')
-        transaction_time = validate_datetime(transaction_time).strftime('%Y-%m-%d %H:%M:%S')
-        validate_dates_relation(valid_start_time, transaction_time, 'Valid Start Date', 'Transaction Insertion Time')
 
         # Check if this record already exists (and needs to be handled with update, not insert)
         if data.check_record(CHECK_RECORD_QUERY, (patient_id, loinc_num, valid_start_time, transaction_time)):
@@ -289,10 +285,13 @@ class PatientRecord:
         component = str(component).strip() if component else None
         valid_start_time = str(valid_start_time).strip()
         new_value = str(new_value).strip()
-        if transaction_time:
-            transaction_time = validate_datetime(transaction_time).strftime('%Y-%m-%d %H:%M:%S')
-        else:
-            transaction_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        valid_start_time = str(valid_start_time).strip()
+        transaction_time = str(transaction_time).strip() if transaction_time else datetime.now()
+
+        # Validate dates
+        valid_start_time = validate_datetime(valid_start_time).strftime('%Y-%m-%d %H:%M:%S')
+        transaction_time = validate_datetime(transaction_time).strftime('%Y-%m-%d %H:%M:%S')
+        validate_dates_relation(valid_start_time, transaction_time, 'Valid Start Date', 'Transaction Insertion Time')
 
         # Verify input
         if not patient_id:
@@ -333,10 +332,6 @@ class PatientRecord:
                 raise LoincCodeNotFound("LOINC code not found in LOINC table.")
         else:
             raise ValueError("You must provide at least a LOINC code or a component name in order to update a measurement.")
-
-        valid_start_time = validate_datetime(valid_start_time).strftime('%Y-%m-%d %H:%M:%S')
-        transaction_time = validate_datetime(transaction_time).strftime('%Y-%m-%d %H:%M:%S')
-        validate_dates_relation(valid_start_time, transaction_time, 'Valid Start Date', 'Transaction Insertion Time')
         
         # Check if this record doesn't exists (and needs to be handled with insert, not update)
         if not data.check_record(CHECK_RECORD_QUERY, (patient_id, loinc_num, valid_start_time, transaction_time)):
@@ -346,7 +341,7 @@ class PatientRecord:
         # deletion_date can be None
         future_record_date = str(data.get_attr(CHECK_FUTURE_RECORD_QUERY, (patient_id, loinc_num, valid_start_time, transaction_time))).strip()
         if future_record_date:
-            raise ValueError(f"This record has a newer update from {future_record_date} and cannot be updated to an unupdated version.")
+            raise ValueError(f"This record has a newer update from {future_record_date} and cannot be updated to an unupdated version (date): {transaction_time}.")
         
         # Fetch the unit from existing records
         unit = str(data.get_attr(GET_EXISTING_UNIT_QUERY, (patient_id, loinc_num, valid_start_time))).strip()
@@ -378,10 +373,12 @@ class PatientRecord:
         loinc_num = str(loinc_num).strip()
         component = str(component).strip()
         valid_start_time = str(valid_start_time).strip()
-        if deletion_time:
-            deletion_time = validate_datetime(deletion_time).strftime('%Y-%m-%d %H:%M:%S')
-        else:
-            deletion_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        deletion_time = str(deletion_time).strip() if deletion_time else datetime.now()
+
+        # Validate dates
+        valid_start_time = validate_datetime(valid_start_time).strftime('%Y-%m-%d %H:%M:%S')
+        deletion_time = validate_datetime(deletion_time).strftime('%Y-%m-%d %H:%M:%S')
+        validate_dates_relation(valid_start_time, deletion_time, 'Valid Start Date', 'Transaction Deletion Time')
 
         # Validate patient
         if not data.check_record(CHECK_PATIENT_BY_ID_QUERY, (patient_id,)):
