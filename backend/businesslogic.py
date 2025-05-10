@@ -40,16 +40,20 @@ def validate_name(name, field_name):
         raise ValueError(f"{field_name} must contain only letters, hyphens (-), or apostrophes (').")
 
 def validate_datetime(dt_string):
-    try:
-        dt = pd.to_datetime(dt_string, dayfirst=True)
-        return dt
-    except Exception:
+    if dt_string is not None:
+        try:
+            # If ISO format, don't use dayfirst
+            if re.match(r"^\d{4}-\d{2}-\d{2}", dt_string):
+                return pd.to_datetime(dt_string, dayfirst=False)
+            else:
+                return pd.to_datetime(dt_string, dayfirst=True)
+        except Exception:
             raise ValueError(f"Invalid date input: '{dt_string}' could not be parsed as a date or datetime.")
 
 def validate_dates_relation(early_date, later_date, early_field_name, later_field_name):
-    if early_date and later_date:
-        early_dt = validate_datetime(early_date)
-        later_dt = validate_datetime(later_date)
+    if early_date is not None and later_date is not None:
+        early_dt = validate_datetime(early_date) if isinstance(early_date, str) else early_date
+        later_dt = validate_datetime(later_date) if isinstance(later_date, str) else later_date
         if later_dt < early_dt:
             raise ValueError(f"{later_field_name} cannot be earlier than {early_field_name}.")
 
@@ -107,12 +111,17 @@ class PatientRecord:
         """
         # Input cleanup
         patient_id = str(patient_id).strip()
-        snapshot_date = str(snapshot_date).strip()
-        loinc_num = str(loinc_num).strip()
-        component = str(component).strip()
-        start = str(start).strip()
-        end = str(end).strip()
+        snapshot_date = str(snapshot_date).strip() if snapshot_date else None
+        loinc_num = str(loinc_num).strip() if loinc_num else None
+        component = str(component).strip() if component else None
+        start = str(start).strip() if start else None
+        end = str(end).strip() if end else None
 
+        if snapshot_date:
+            snapshot_date = validate_datetime(snapshot_date).strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            snapshot_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
         # Input validation
         if not data.check_record(CHECK_PATIENT_BY_ID_QUERY, (patient_id,)):
             raise PatientNotFound("Patient not found")
@@ -176,8 +185,8 @@ class PatientRecord:
         """
         # Input cleanup
         patient_id = str(patient_id).strip()
-        first_name = str(first_name).strip()
-        last_name = str(last_name).strip()
+        first_name = str(first_name).strip().capitalize()
+        last_name = str(last_name).strip().capitalize()
         
         # Validations:
         if data.check_record(CHECK_PATIENT_BY_ID_QUERY, (patient_id,)):
@@ -228,13 +237,18 @@ class PatientRecord:
         # CASE 1: Both LOINC and Component provided → check match
         if loinc_num and component:
             loinc_num_1 = loinc_num
-            loinc_num_2 = str(data.get_attr(GET_LOINC_BY_COMPONENT_QUERY, (component,))).strip()
-            if not loinc_num_1 == loinc_num_2:
-                raise ValueError(f"LOINC code '{loinc_num_1}' and component '{component}' do not match. The input component returned Loinc-Code={loinc_num_2}. Check the LOINC repository to fetch the correct code / name of the intended concept.")
+            matching_loinc_codes = data.fetch_records(GET_LOINC_BY_COMPONENT_QUERY, (component,))
+            matching_loinc_codes = [code[0] for code in matching_loinc_codes] # Extract from tuples
+            if not loinc_num_1 in matching_loinc_codes:
+                raise ValueError(f"LOINC code '{loinc_num_1}' and component '{component}' do not match. The input component returned Loinc-Codes={matching_loinc_codes}. Check the LOINC repository to fetch the correct code / name of the intended concept.")
         
-        # CASE 2: Only Component provided → look up LOINC code
+        # CASE 2: Only Component provided → look up LOINC code from the full LOINC table
         elif component and not loinc_num:
-            loinc_num = str(data.get_attr(GET_LOINC_BY_COMPONENT_QUERY, (component,))).strip()
+            matching_loinc_codes = data.fetch_records(GET_LOINC_BY_COMPONENT_QUERY, (component,))
+            matching_loinc_codes = [code[0] for code in matching_loinc_codes] # Extract from tuples
+            if len(matching_loinc_codes)> 1:
+                raise ValueError(f"The component name you inserted returned more than 1 code, so the system does not know which code to use. Please insert the exact code you want to use.")
+            loinc_num = str(matching_loinc_codes[0]).strip()
             if not loinc_num:
                 raise ValueError(f"No LOINC code found for component '{component}' in LOINC table. Check the LOINC repository to fetch the correct code / name of the intended concept.")
         
@@ -244,6 +258,7 @@ class PatientRecord:
                 raise LoincCodeNotFound("LOINC code not found in LOINC table.")
         else:
             raise ValueError("You must provide at least a LOINC code or a component name in order to update a measurement.")
+        
         
         valid_start_time = validate_datetime(valid_start_time).strftime('%Y-%m-%d %H:%M:%S')
         transaction_time = validate_datetime(transaction_time).strftime('%Y-%m-%d %H:%M:%S')
@@ -294,14 +309,21 @@ class PatientRecord:
         # CASE 1: Both LOINC and Component provided → check match
         if loinc_num and component:
             loinc_num_1 = loinc_num
-            loinc_num_2 = str(data.get_attr(GET_LOINC_BY_COMPONENT_QUERY, (component,))).strip()
-            if not loinc_num_1 == loinc_num_2:
-                raise ValueError(
-                    f"LOINC code '{loinc_num_1}' and component '{component}' do not match. The input component returned Loinc-Code={loinc_num_2}. Check the LOINC repository to fetch the correct code / name of the intended concept.")
-
-        # CASE 2: Only Component provided → look up LOINC code
+            matching_loinc_codes = data.fetch_records(GET_LOINC_BY_COMPONENT_QUERY, (component,))
+            matching_loinc_codes = [code[0] for code in matching_loinc_codes] # Extract from tuples
+            if not loinc_num_1 in matching_loinc_codes:
+                raise ValueError(f"LOINC code '{loinc_num_1}' and component '{component}' do not match. The input component returned Loinc-Codes={matching_loinc_codes}. Check the LOINC repository to fetch the correct code / name of the intended concept.")
+        
+        # CASE 2: Only Component provided → look up LOINC code from the the patient's measurements table (you can only change an existing code)
         elif component and not loinc_num:
-            loinc_num = str(data.get_attr(GET_LOINC_BY_COMPONENT_QUERY, (component,))).strip()
+            # Fix base query to match the smaller search space
+            query = GET_LOINC_BY_COMPONENT_QUERY.copy()
+            query += " AND PatientId = ? AND DATE(ValidStartTime) = ? AND (TransactionDeletionTime IS NULL OR DATE(TransactionDeletionTime) > ?)"
+            matching_loinc_codes = data.fetch_records(query, (component, patient_id, valid_start_time, transaction_time))
+            matching_loinc_codes = [code[0] for code in matching_loinc_codes] # Extract from tuples
+            if len(matching_loinc_codes)> 1:
+                raise ValueError(f"The component name you inserted returned more than 1 code, so the system does not know which code to use. Please insert the exact code you want to use.")
+            loinc_num = str(matching_loinc_codes[0]).strip()
             if not loinc_num:
                 raise ValueError(f"No LOINC code found for component '{component}' in LOINC table. Check the LOINC repository to fetch the correct code / name of the intended concept.")
 
@@ -356,7 +378,10 @@ class PatientRecord:
         loinc_num = str(loinc_num).strip()
         component = str(component).strip()
         valid_start_time = str(valid_start_time).strip()
-        deletion_time = str(valid_start_time).strip() if deletion_time else deletion_time
+        if deletion_time:
+            deletion_time = validate_datetime(deletion_time).strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            deletion_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
         # Validate patient
         if not data.check_record(CHECK_PATIENT_BY_ID_QUERY, (patient_id,)):
@@ -365,15 +390,23 @@ class PatientRecord:
         # CASE 1: Both LOINC and Component provided → check match
         if loinc_num and component:
             loinc_num_1 = loinc_num
-            loinc_num_2 = str(data.get_attr(GET_LOINC_BY_COMPONENT_QUERY, (component,))).strip()
-            if not loinc_num_1 == loinc_num_2:
-                raise ValueError(f"LOINC code '{loinc_num_1}' and component '{component}' do not match. The input component returned Loinc-Code={loinc_num_2}. Check the LOINC repository to fetch the correct code / name of the intended concept.")
-
-        # CASE 2: Only Component provided → look up LOINC code
-        if not loinc_num and component:
-            loinc_num = str(data.get_attr(GET_LOINC_BY_COMPONENT_QUERY, (component,))).strip()
+            matching_loinc_codes = data.fetch_records(GET_LOINC_BY_COMPONENT_QUERY, (component,))
+            matching_loinc_codes = [code[0] for code in matching_loinc_codes] # Extract from tuples
+            if not loinc_num_1 in matching_loinc_codes:
+                raise ValueError(f"LOINC code '{loinc_num_1}' and component '{component}' do not match. The input component returned Loinc-Codes={matching_loinc_codes}. Check the LOINC repository to fetch the correct code / name of the intended concept.")
+        
+        # CASE 2: Only Component provided → look up LOINC code from the the patient's measurements table (you can only change an existing code)
+        elif component and not loinc_num:
+            # Fix base query to match the smaller search space
+            query = GET_LOINC_BY_COMPONENT_QUERY.copy()
+            query += " AND PatientId = ? AND DATE(ValidStartTime) = ? AND (TransactionDeletionTime IS NULL OR DATE(TransactionDeletionTime) > ?)"
+            matching_loinc_codes = data.fetch_records(query, (component, patient_id, valid_start_time, deletion_time))
+            matching_loinc_codes = [code[0] for code in matching_loinc_codes] # Extract from tuples
+            if len(matching_loinc_codes)> 1:
+                raise ValueError(f"The component name you inserted returned more than 1 code, so the system does not know which code to use. Please insert the exact code you want to use.")
+            loinc_num = str(matching_loinc_codes[0]).strip()
             if not loinc_num:
-                raise ValueError(f"No LOINC code found for component '{component}'")
+                raise ValueError(f"No LOINC code found for component '{component}' in LOINC table. Check the LOINC repository to fetch the correct code / name of the intended concept.")
         
         # CASE 3: Only LOINC-Code provided → continue as usual
         elif loinc_num:
@@ -390,11 +423,6 @@ class PatientRecord:
             valid_start_time = str(data.get_attr(GET_LATEST_VALIDTIME_FOR_DAY_QUERY, (patient_id, loinc_num, date_only))).strip()
             if not valid_start_time:
                 raise RecordNotFound(f"No measurement found for patient {patient_id} on {date_only} for LOINC-Code {loinc_num}. Be sure that the record was not deleted in TransactionDeletionTime.")
-
-        if deletion_time:
-            deletion_time = validate_datetime(deletion_time).strftime('%Y-%m-%d %H:%M:%S')
-        else:
-            deletion_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
         # Check if record exists in the desired snapshot. One cannot delete an already deleted record at past time.
         if not data.check_record(CHECK_RECORD_QUERY, (patient_id, loinc_num, valid_start_time, deletion_time)):

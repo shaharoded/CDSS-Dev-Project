@@ -1,21 +1,5 @@
-WITH ComponentLoincs AS (
-    SELECT LoincNum
-    FROM Loinc
-    WHERE Component = ?
-)
+-- Purpose: Get all appropriate LOINC code based on a given name. 
+
 SELECT LoincNum
-FROM (
-    -- First: prefer one that exists in Measurements
-    SELECT cl.LoincNum
-    FROM ComponentLoincs cl
-    WHERE EXISTS (
-        SELECT 1
-        FROM Measurements m
-        WHERE m.LoincNum = cl.LoincNum
-    )
-    UNION ALL
-    -- Fallback: any from the component list
-    SELECT cl.LoincNum
-    FROM ComponentLoincs cl
-)
-LIMIT 1;
+FROM Loinc
+WHERE Component = ?

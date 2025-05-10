@@ -123,67 +123,45 @@ class DataAccess:
         return bool(result)
 
     def __load_patients_from_excel(self):
-        """
-        Load patients and measurements from Excel.
-        Warns about LOINC codes not found in the LOINC table.
-        """
         df = pd.read_excel(PATIENTS_FILE)
 
         if df.empty:
             print('[Info]: No patients data found to load.')
             return
-
-        # Convert datetime
+        
+        # Convert datetime columns to ISO 8601 format: 'YYYY-MM-DD HH:MM:SS'
+        # Drop rows where datetime conversion failed
         for col in ['Valid start time', 'Transaction time']:
             df[col] = pd.to_datetime(df[col], errors='coerce', dayfirst=True).dt.strftime('%Y-%m-%d %H:%M:%S')
         df.dropna(subset=['Valid start time', 'Transaction time'], inplace=True)
 
-        # Deduplicate and insert patients
-        unique_patients = df[['First name', 'Last name', 'PatientId']].drop_duplicates()
+        # Deduplicate patients
+        unique_patients = df[['PatientId', 'First name', 'Last name']].drop_duplicates()
+
+        # Insert unique patients
         for _, row in unique_patients.iterrows():
             self.execute_query(
                 INSERT_PATIENT_QUERY,
-                (
-                    str(row['PatientId']).strip(),
-                    str(row['First name']).strip().title(),
-                    str(row['Last name']).strip().title()
-                )
+                (row['PatientId'], row['First name'], row['Last name'])
             )
 
-        # Step 1: Check LOINC validity
-        all_loincs = df['LOINC-NUM'].astype(str).str.strip().unique()
-        placeholders = ','.join(['?'] * len(all_loincs))
-        existing_loincs = set(
-            l[0] for l in self.fetch_records(
-                f"SELECT LoincNum FROM Loinc WHERE LoincNum IN ({placeholders})",
-                tuple(all_loincs)
-            )
-        )
-        invalid_loincs = ', '.join([code for code in all_loincs if code not in existing_loincs])
-
-        if invalid_loincs:
-            print(f"[⚠️ Warning]: The following LOINC codes were not found in the DB and should be migrated or fixed:\n{invalid_loincs}")
-
-        # Step 2: Insert valid measurement rows
+        # Insert measurements
         for _, row in df.iterrows():
-            loinc_code = str(row['LOINC-NUM']).strip()
-            if loinc_code not in existing_loincs:
-                continue  # Or replace with fallback like: loinc_code = '0000-0'
-
             self.execute_query(
                 INSERT_MEASUREMENT_QUERY,
                 (
-                    str(row['PatientId']).strip(),
-                    loinc_code,
-                    str(row['Value']).strip(),
-                    str(row['Unit']).strip(),
-                    str(row['Valid start time']).strip(),
-                    str(row['Transaction time']).strip()
+                    row['PatientId'],
+                    row['LOINC-NUM'],
+                    row['Value'],
+                    row['Unit'],
+                    str(row['Valid start time']),
+                    str(row['Transaction time'])
                 )
             )
 
-        print(f'[Info]: Loaded {len(df) - len(invalid_loincs)} measurement records and {len(unique_patients)} unique patients from Excel.')
-
+        print(
+            f'[Info]: Loaded {len(df)} measurement records and {len(unique_patients)} unique patients from Excel file to DB tables.')
+    
     def __load_loinc_from_zip(self):
         """
         Load LOINC codes from a ZIP file and insert them into the Loinc table in the DB for future use.

@@ -137,9 +137,9 @@ class Application(tk.Tk):
 
         self.insert_measurement_update_pid = self._add_labeled_entry(tab, "Patient ID", "• A 9 digit number\n• e.g. 208399845")
         self.insert_measurement_update_loinc = self._add_labeled_entry(tab, "LOINC Code", "• A valid LOINC code\n• e.g. 2055-2")
-        self.insert_measurement_update_component = self._add_labeled_entry(tab, "Component","Optional measurement name\ne.g. Glucose, Hemoglobin")
+        self.insert_measurement_update_component = self._add_labeled_entry(tab, "Component (Optional)","Optional measurement name\ne.g. Glucose, Hemoglobin\n• You can filter the db using this field, the LOINC-Code or both")
         self.insert_measurement_update_time = self._add_labeled_entry(tab, "Valid Start Time", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024")
-        self.insert_measurement_update_value = self._add_labeled_entry(tab, "New Value", "• Numeric or textual value\n• e.g. 12.5")
+        self.insert_measurement_update_value = self._add_labeled_entry(tab, "Value", "• Numeric or textual value\n• e.g. 12.5")
         self.insert_measurement_update_unit = self._add_labeled_entry(tab, "Unit", "• Textual unit (for the measurement)\n• e.g. m/g")
         self.insert_measurement_update_transaction_time = self._add_labeled_entry(tab, "Transaction Time (Optional)", "• Date/time format\n• e.g. 01/01/2024 00:00 or just 01/01/2024\n• Allows to create retro updates, as if created in past time\n• If empty, will automatically use current date-time")
 
@@ -222,6 +222,7 @@ class Application(tk.Tk):
             self.search_result.insert(tk.END, "-" * 98 + "\n")
             for row in results:
                 loinc, concept, value, unit, valid_start, insertion_time = row
+                concept = concept[:16] + '...' if len(concept) > 16 else concept
                 self.search_result.insert(
                     tk.END,
                     f"{loinc:<10} {concept:<20} {value:<8} {unit:<16} {valid_start:<20} {insertion_time:<20}\n"
@@ -273,7 +274,7 @@ class Application(tk.Tk):
             self.create_measurement_update_result.delete("1.0", tk.END)
             self.create_measurement_update_result.insert(tk.END, "-> A new patient's measurement record was added to the DB:\n")
             self.create_measurement_update_result.insert(tk.END, f"-> PatientId: {pid}, LOINC: {loinc}, ValidStartTime: {valid_time}\n")
-            self.create_measurement_update_result.insert(tk.END, f"-> New Value = {value}\n")
+            self.create_measurement_update_result.insert(tk.END, f"-> Value = {value}\n")
             self.create_measurement_update_result.insert(tk.END, f"-> Effective Date / Time (Transaction time): {transaction_time}\n")
             self.create_measurement_update_result.configure(state='disabled')  # disable editing again
             messagebox.showinfo("Success", "Measurement inserted.")

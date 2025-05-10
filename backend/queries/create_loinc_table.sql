@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS Loinc (
     LoincNum TEXT PRIMARY KEY,
-    Component TEXT UNIQUE,  -- Prevent duplicate Component names
+    Component TEXT, -- May contain duplicated names
     Property TEXT,
     TimeAspect TEXT,
     System TEXT,
