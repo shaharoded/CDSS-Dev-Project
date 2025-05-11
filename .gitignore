@@ -9,3 +9,4 @@ Mini-Project*
 venv/
 __pycache__/
 data/loinc_extracted/
+tests/
