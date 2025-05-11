@@ -109,9 +109,9 @@ class Application(tk.Tk):
         self.search_patient_id = self._add_labeled_entry(tab, "Patient ID", "• A 9 digit number\n• e.g. 208399845")
         self.search_loinc = self._add_labeled_entry(tab, "LOINC Code (optional)", "• a Valid LOINC code\n• e.g. 2055-2")
         self.search_component = self._add_labeled_entry(tab, "LOINC Name (optional)", "• A full or partial LOINC Name\n• Will accept partial match to substring\n• e.g. Glucose.")
-        self.search_start = self._add_labeled_entry(tab, "Start Date/Time (optional)", "• Date/time format\n• e.g. 2024-01-01 00:00 or just 2024-01-01")
-        self.search_end = self._add_labeled_entry(tab, "End Date/Time (optional)", "• Date/time format\n• e.g. 2024-01-01 00:00 or just 2024-01-01")
-        self.search_snapshot = self._add_labeled_entry(tab, "Snapshot Date/Time (optional)", "• Used to show results relative to a past DB snapshot\n• Date/time format\n• e.g. 2024-01-01 00:00 or just 2024-01-01\n• If empty, will automatically use the current DB")
+        self.search_start = self._add_labeled_entry(tab, "Start Date/Time (optional)", "• Date/time format\n• e.g. 2024-01-01 00:00:00 or just 2024-01-01")
+        self.search_end = self._add_labeled_entry(tab, "End Date/Time (optional)", "• Date/time format\n• e.g. 2024-01-01 00:00:00 or just 2024-01-01")
+        self.search_snapshot = self._add_labeled_entry(tab, "Snapshot Date/Time (optional)", "• Used to show results relative to a past DB snapshot\n• Date/time format\n• e.g. 2024-01-01 00:00:00 or just 2024-01-01\n• If empty, will automatically use the current DB")
 
         tk.Button(tab, text="Search", command=self.search_history).pack(pady=10)
         self.search_result = tk.Text(tab, height=15, width=100)
@@ -141,7 +141,7 @@ class Application(tk.Tk):
         self.insert_measurement_update_time = self._add_labeled_entry(tab, "Valid Start Time", "• Date/time format\n• e.g. 2025-05-01 12:00:00\n• An exact time must be used for insert and update operations")
         self.insert_measurement_update_value = self._add_labeled_entry(tab, "Value", "• Numeric or textual value\n• e.g. 12.5")
         self.insert_measurement_update_unit = self._add_labeled_entry(tab, "Unit", "• Textual unit (for the measurement)\n• e.g. m/g")
-        self.insert_measurement_update_transaction_time = self._add_labeled_entry(tab, "Transaction Time (optional)", "• Date/time format\n• e.g. 2024-01-01 00:00 or just 2024-01-01\n• Allows to create retro updates, as if created in past time\n• If empty, will automatically use current date-time")
+        self.insert_measurement_update_transaction_time = self._add_labeled_entry(tab, "Transaction Time (optional)", "• Date/time format\n• e.g. 2024-01-01 00:00:00 or just 2024-01-01\n• Allows to create retro updates, as if created in past time\n• If empty, will automatically use current date-time")
 
         tk.Button(tab, text="Insert Measurement", command=self.insert_measurement).pack(pady=10)
         self.create_measurement_update_result = tk.Text(tab, height=5)
@@ -157,7 +157,7 @@ class Application(tk.Tk):
         self.update_measurement_update_component = self._add_labeled_entry(tab, "LOINC Component Name (optional)", "• A valid LOINC component name\n• e.g. Albumin\n• You can filter the db using this field, the LOINC-Code or both")
         self.update_measurement_update_time = self._add_labeled_entry(tab, "Valid Start Time", "• Date/time format\n• e.g. 2025-05-01 12:00:00\n• An exact time must be used for insert and update operations")
         self.update_measurement_update_value = self._add_labeled_entry(tab, "New Value", "• Numeric or textual value\n• e.g. 12.5")
-        self.update_measurement_update_transaction_time = self._add_labeled_entry(tab, "Transaction Time (optional)", "• Date/time format\n• e.g. 2024-01-01 00:00 or just 2024-01-01\n• Allows to create retro updates, as if created in past time\n• If empty, will automatically use current date-time")
+        self.update_measurement_update_transaction_time = self._add_labeled_entry(tab, "Transaction Time (optional)", "• Date/time format\n• e.g. 2024-01-01 00:00:00 or just 2024-01-01\n• Allows to create retro updates, as if created in past time\n• If empty, will automatically use current date-time")
 
 
         tk.Button(tab, text="Update Measurement", command=self.update_measurement).pack(pady=10)
@@ -172,8 +172,8 @@ class Application(tk.Tk):
         self.delete_measurement_delete_pid = self._add_labeled_entry(tab, "Patient ID", "• A 9 digit number\n• e.g. 208399845")
         self.delete_measurement_delete_loinc = self._add_labeled_entry(tab, "LOINC Code", "• A valid LOINC code\n• e.g. 2055-2")
         self.delete_measurement_delete_component = self._add_labeled_entry(tab, "LOINC Component Name (optional)", "• A valid LOINC component name\n• e.g. Albumin\n• You can filter the db using this field, the LOINC-Code or both")
-        self.delete_measurement_valid_time = self._add_labeled_entry(tab, "Valid Start Time", "• Date/time format\n• e.g. 2024-01-01 00:00 or just 2024-01-01")
-        self.delete_measurement_delete_time = self._add_labeled_entry(tab, "Deletion Time (optional)", "• Date/time format\n• e.g. 2024-01-01 00:00 or just 2024-01-01\n• Allows to delete records with past TransactionDeletionTime\n• If empty, will automatically use current date-time")
+        self.delete_measurement_valid_time = self._add_labeled_entry(tab, "Valid Start Time", "• Date/time format\n• e.g. 2024-01-01 00:00:00 or just 2024-01-01\n• If you choose do use date only, the last record (based on Valid Start Time) of this day will be deleted")
+        self.delete_measurement_delete_time = self._add_labeled_entry(tab, "Deletion Time (optional)", "• Date/time format\n• e.g. 2024-01-01 00:00:00 or just 2024-01-01\n• Allows to delete records with past TransactionDeletionTime\n• If empty, will automatically use current date-time")
 
         tk.Button(tab, text="Delete Measurement", command=self.delete_measurement).pack(pady=10)
         self.delete_measurement_delete_result = tk.Text(tab, height=5)
