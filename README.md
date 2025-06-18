@@ -9,7 +9,7 @@ cdss-dev-project/
 ├── data/
 │   ├── project_db.xlsx       # Patients batch file
 │   ├── cdss.db               # Processed DB for all operations. Created automatically.
-│   ├── Loinc_2.80.zip
+│   └── Loinc_2.80.zip
 │
 ├── backend/
 ├── ├── queries/              # All of the queries for initialization, data access and business logic
@@ -17,6 +17,12 @@ cdss-dev-project/
 │   │   ├── create_loinc_table.sql
 │   │   ├── insert_patient.sql
 │   │   └── ...
+│   │
+├── ├── tak/                  # All abstraction and rules TAK/ Json files.
+│   │   ├── hemoglobin_state.xml
+│   │   ├── wbc_state.xml
+│   │   └── ...
+│   │
 │   ├── backend_config.py     # Configuration file for the backend operations
 │   ├── dataaccess.py         # DB connection module
 │   ├── businesslogic.py      # Business logic module
