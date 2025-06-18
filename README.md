@@ -7,8 +7,8 @@ Developing a CDSS as a mini project
 cdss-dev-project/
 │
 ├── data/
-│   ├── project_db.xlsx       # Patients file
-│   ├── cdss.db               # Processed DB for all operations. Created on the first run
+│   ├── project_db.xlsx       # Patients batch file
+│   ├── cdss.db               # Processed DB for all operations. Created automatically.
 │   ├── Loinc_2.80.zip
 │
 ├── backend/
@@ -18,12 +18,14 @@ cdss-dev-project/
 │   │   ├── insert_patient.sql
 │   │   └── ...
 │   ├── backend_config.py     # Configuration file for the backend operations
-│   ├── dataaccess.py
-│   ├── businesslogic.py
+│   ├── dataaccess.py         # DB connection module
+│   ├── businesslogic.py      # Business logic module
+│   ├── mediator.py           # Data abstraction calculation module
+│   └── engine.py             # Rule-based patient's state inference module
 │
 ├── frontend/
 │   ├── images/               # Images used for design
-│   ├── userinterface.py
+│   └── userinterface.py      # UI
 │
 ├── README.md
 ├── requirements.txt
