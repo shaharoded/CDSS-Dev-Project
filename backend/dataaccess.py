@@ -123,30 +123,31 @@ class DataAccess:
         return bool(result)
 
     def __load_patients_from_excel(self):
-        df = pd.read_excel(PATIENTS_FILE)
+        patients_df = pd.read_excel(PATIENTS_FILE, sheet_name='Patients')
+        measurements_df = pd.read_excel(PATIENTS_FILE, sheet_name='Measurements')
 
-        if df.empty:
+        if patients_df.empty:
             print('[Info]: No patients data found to load.')
             return
         
         # Convert datetime columns to ISO 8601 format: 'YYYY-MM-DD HH:MM:SS'
         # Drop rows where datetime conversion failed
         for col in ['Valid start time', 'Transaction time']:
-            df[col] = pd.to_datetime(df[col], errors='coerce', dayfirst=True).dt.strftime('%Y-%m-%d %H:%M:%S')
-        df.dropna(subset=['Valid start time', 'Transaction time'], inplace=True)
+            measurements_df[col] = pd.to_datetime(measurements_df[col], errors='coerce', dayfirst=True).dt.strftime('%Y-%m-%d %H:%M:%S')
+        measurements_df.dropna(subset=['Valid start time', 'Transaction time'], inplace=True)
 
         # Deduplicate patients
-        unique_patients = df[['PatientId', 'First name', 'Last name']].drop_duplicates()
+        unique_patients = patients_df[['PatientId', 'First name', 'Last name', 'Sex']].drop_duplicates()
 
         # Insert unique patients
         for _, row in unique_patients.iterrows():
             self.execute_query(
                 INSERT_PATIENT_QUERY,
-                (row['PatientId'], row['First name'], row['Last name'])
+                (row['PatientId'], row['First name'], row['Last name'], row['Sex'])
             )
 
         # Insert measurements
-        for _, row in df.iterrows():
+        for _, row in measurements_df.iterrows():
             self.execute_query(
                 INSERT_MEASUREMENT_QUERY,
                 (
@@ -160,7 +161,7 @@ class DataAccess:
             )
 
         print(
-            f'[Info]: Loaded {len(df)} measurement records and {len(unique_patients)} unique patients from Excel file to DB tables.')
+            f'[Info]: Loaded {len(measurements_df)} measurement records and {len(unique_patients)} unique patients from Excel file to DB tables.')
     
     def __load_loinc_from_zip(self):
         """
@@ -193,7 +194,8 @@ class DataAccess:
                         str(row['TIME_ASPCT']).strip(),
                         str(row['SYSTEM']).strip(), 
                         str(row['SCALE_TYP']).strip(), 
-                        str(row['METHOD_TYP']).strip()
+                        str(row['METHOD_TYP']).strip(),
+                        str(row['ALLOWED_VALUES']).strip(),
                     )
                 )
             print(f'[Info]: Loaded {len(df)} LOINC codes from ZIP.')

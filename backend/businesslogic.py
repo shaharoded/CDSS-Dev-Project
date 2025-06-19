@@ -7,6 +7,7 @@ SQL queries and data access functions.
 All SQL queries are saved separately under /queries/
 """
 import pandas as pd
+import json
 import re
 from datetime import datetime
 
@@ -19,6 +20,9 @@ data = DataAccess()
 
 ## ------------------ Validation Functions ------------------
 def validate_patient_id(patient_id):
+    """
+    Ensures patient ID is a valid number
+    """
     if not patient_id.isdigit():
         raise ValueError("Patient ID must contain digits only.")
     if len(patient_id) != 9:
@@ -32,7 +36,17 @@ def validate_name(name, field_name):
     if not re.fullmatch(pattern, name):
         raise ValueError(f"{field_name} must contain only letters, hyphens (-), or apostrophes (').")
 
+def validate_sex(sex):
+    """
+    Ensures Sex is Male / Female
+    """
+    if not sex in ['Male', 'Female']:
+        raise ValueError(f"Don't go woke on us, you must pick a value from ['Male', 'Female'] for a patient's sex")
+
 def validate_datetime(dt_string):
+    """
+    Validates date, tries to parse.
+    """
     if dt_string is not None:
         try:
             # Match ISO formats like 'YYYY-MM-DD', 'YYYY-MM-DD HH:MM', 'YYYY-MM-DD HH:MM:SS'
@@ -44,11 +58,37 @@ def validate_datetime(dt_string):
             raise ValueError(f"Invalid date input: '{dt_string}' could not be parsed as a date or datetime.")
 
 def validate_dates_relation(early_date, later_date, early_field_name, later_field_name):
+    """
+    Ensures the relationship between 2 dates (one is expected to be later than the other)
+    """
     if early_date is not None and later_date is not None:
         early_dt = validate_datetime(early_date) if isinstance(early_date, str) else early_date
         later_dt = validate_datetime(later_date) if isinstance(later_date, str) else later_date
         if later_dt < early_dt:
             raise ValueError(f"{later_field_name} cannot be earlier than {early_field_name}.")
+
+def validate_value(loinc_num, value, allowed_values):
+    """
+    Validates value compared to the allowed value column in LOINC.
+    """
+    allowed_value_raw = allowed_values[0][0] if allowed_values else None
+
+    if allowed_value_raw is None or allowed_value_raw.strip().upper() == 'NUM':
+        # No validation needed — numerical or unrestricted
+        pass
+
+    else:
+        try:
+            # Convert stringified list to actual list (e.g., '["A", "B"]' → ['A', 'B'])
+            allowed_list = json.loads(allowed_value_raw)
+            if value not in allowed_list:
+                raise ValueError(
+                    f"Invalid input: '{value}'. Allowed values for LOINC code {loinc_num} are: {allowed_list}"
+                )
+        except json.JSONDecodeError:
+            raise ValueError(
+                f"Could not parse allowed values for LOINC code {loinc_num}. Value: {allowed_value_raw}"
+            )
 
 # ------------------ Class Exceptions ------------------
 class PatientNotFound(Exception):
@@ -94,7 +134,7 @@ class PatientRecord:
         if not matches:
            raise PatientNotFound("Patient not found")
          
-        return matches  # Return ID, First Name, Last Name from DB for every matching patient by name
+        return matches  # Return ID, First Name, Last Name, Sex from DB for every matching patient by name
 
     @staticmethod
     def search_history(patient_id, snapshot_date=None, loinc_num=None, component=None, start=None, end=None):
@@ -179,7 +219,7 @@ class PatientRecord:
         return result
    
     @staticmethod
-    def register_patient(patient_id, first_name, last_name):
+    def register_patient(patient_id, first_name, last_name, sex):
         """
         Inserts a new patient to the DB (Patients table).
         """
@@ -190,6 +230,8 @@ class PatientRecord:
             raise ValueError("You cannot register a new patient without their first name.")
         if not last_name:
             raise ValueError("You cannot register a new patient without their first name.")
+        if not sex:
+            raise ValueError("You cannot register a new patient without their Sex.")
         
         # Input cleanup
         patient_id = str(patient_id).strip()
@@ -202,9 +244,10 @@ class PatientRecord:
         validate_patient_id(patient_id)
         validate_name(first_name, 'First Name')
         validate_name(last_name, 'Last Name')
+        validate_sex(sex)
         
         # Insert new patient
-        data.execute_query(INSERT_PATIENT_QUERY, (patient_id, first_name, last_name))
+        data.execute_query(INSERT_PATIENT_QUERY, (patient_id, first_name, last_name, sex))
     
     @staticmethod
     def insert_measurement(patient_id, valid_start_time, value, unit, component=None, loinc_num=None, transaction_time=None):
@@ -270,6 +313,10 @@ class PatientRecord:
         elif loinc_num:
             if not data.check_record(CHECK_LOINC_QUERY, (loinc_num,)):
                 raise LoincCodeNotFound("LOINC code not found in LOINC table.")
+
+        # Check input value match table restrictions
+        allowed_values = data.fetch_records(GET_LOINC_ALLOWED_VALUES, (loinc_num,))
+        validate_value(loinc_num, value, allowed_values)
 
         # Check if this record already exists (and needs to be handled with update, not insert)
         if data.check_record(CHECK_RECORD_QUERY, (patient_id, loinc_num, valid_start_time, transaction_time)):
@@ -342,6 +389,10 @@ class PatientRecord:
         elif loinc_num:
             if not data.check_record(CHECK_LOINC_QUERY, (loinc_num,)):
                 raise LoincCodeNotFound("LOINC code not found in LOINC table.")
+        
+        # Check input value match table restrictions
+        allowed_values = data.fetch_records(GET_LOINC_ALLOWED_VALUES, (loinc_num,))
+        validate_value(loinc_num, new_value, allowed_values)
         
         # Check if this record doesn't exists (and needs to be handled with insert, not update)
         if not data.check_record(CHECK_RECORD_QUERY, (patient_id, loinc_num, valid_start_time, transaction_time)):

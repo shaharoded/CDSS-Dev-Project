@@ -8,5 +8,6 @@ CREATE TABLE IF NOT EXISTS Loinc (
     TimeAspect TEXT,
     System TEXT,
     ScaleType TEXT,
-    MethodType TEXT
+    MethodType TEXT,
+    AllowedValues TEXT
 );

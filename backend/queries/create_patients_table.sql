@@ -3,7 +3,8 @@
 CREATE TABLE IF NOT EXISTS Patients (
     PatientId TEXT PRIMARY KEY,
     FirstName TEXT,
-    LastName TEXT
+    LastName TEXT,
+    Sex TEXT
 );
 
 

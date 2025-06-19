@@ -43,6 +43,8 @@ cdss-dev-project/
 - Python 3.7 or higher.
 - Loinc_2.80.zip (Downloaded from [Loinc-Org](https://loinc.org/downloads/)) - Should be placed under `data` repository.
 
+NOTE: For the recommendation system section of thsi project, the LOINC table was modified, re-zipped and used, adding a few SNOMED codes to it for the engine's rules. 
+
 ### Setup
 
 1. Clone the repository:
