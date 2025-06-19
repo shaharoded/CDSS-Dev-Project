@@ -125,6 +125,7 @@ class Application(tk.Tk):
         self.insert_patient_update_pid = self._add_labeled_entry(tab, "Patient ID", "• A 9 digit number\n• e.g. 208399845")
         self.insert_patient_update_first_name = self._add_labeled_entry(tab, "First Name", "• A patient's first name\n• e.g. John")
         self.insert_patient_update_last_name = self._add_labeled_entry(tab, "Last Name", "• A patient's last name\n• e.g. Doe")
+        self.insert_patient_update_sex = self._add_labeled_entry(tab, "Sex", "• A patient's sex\n• e.g. Male, Female")
 
         tk.Button(tab, text="Insert Patient", command=self.insert_patient).pack(pady=10)
         self.create_patient_update_result = tk.Text(tab, height=5)
@@ -194,10 +195,10 @@ class Application(tk.Tk):
                 self.get_result.insert(tk.END, "-> No patient found.\n")
                 return
             
-            self.get_result.insert(tk.END, f"{'ID':<12} {'First Name':<15} {'Last Name':<15}\n")
-            self.get_result.insert(tk.END, "-" * 42 + "\n")
+            self.get_result.insert(tk.END, f"{'ID':<12} {'First Name':<15} {'Last Name':<15} {'Sex':<6}\n")
+            self.get_result.insert(tk.END, "-" * 50 + "\n")
             for row in results:
-                self.get_result.insert(tk.END, f"{row[0]:<12} {row[1]:<15} {row[2]:<15}\n")
+                self.get_result.insert(tk.END, f"{row[0]:<12} {row[1]:<15} {row[2]:<15} {row[3]:<15}\n")
             self.get_result.configure(state='disabled')  # disable editing again
         except Exception as e:
             messagebox.showerror("Error", str(e))
@@ -218,14 +219,16 @@ class Application(tk.Tk):
                 self.search_result.insert(tk.END, "-> No measurement records found for this patient under these conditions.\n")
                 return
 
-            self.search_result.insert(tk.END, f"{'LOINC-Code':<10} {'Concept Name':<20} {'Value':<8} {'Unit':<16} {'Start Time':<20} {'Transaction Time':<20}\n")
+            self.search_result.insert(tk.END, f"{'LOINC-Code':<10} {'Concept Name':<20} {'Value':<19} {'Unit':<5} {'Start Time':<20} {'Transaction Time':<20}\n")
             self.search_result.insert(tk.END, "-" * 98 + "\n")
             for row in results:
                 loinc, concept, value, unit, valid_start, insertion_time = row
                 concept = concept[:16] + '...' if len(concept) > 16 else concept
+                value = value[:19] + '...' if len(value) > 19 else value
+                unit = unit[:5] + '...' if len(unit) > 5 else unit
                 self.search_result.insert(
                     tk.END,
-                    f"{loinc:<10} {concept:<20} {value:<8} {unit:<16} {valid_start:<20} {insertion_time:<20}\n"
+                    f"{loinc:<10} {concept:<20} {value:<19} {unit:<5} {valid_start:<20} {insertion_time:<20}\n"
                 )
             self.search_result.configure(state='disabled')  # disable editing again
         except Exception as e:
@@ -235,13 +238,14 @@ class Application(tk.Tk):
         pid = self.insert_patient_update_pid.get()
         first = self.insert_patient_update_first_name.get()
         last = self.insert_patient_update_last_name.get()
+        sex = self.insert_patient_update_sex.get()
 
         try:
-            self.record.register_patient(pid, first, last)
+            self.record.register_patient(pid, first, last, sex)
             self.create_patient_update_result.configure(state='normal')  # enable editing
             self.create_patient_update_result.delete("1.0", tk.END)
             self.create_patient_update_result.insert(tk.END, "-> A new patient record was added to the DB:\n")
-            self.create_patient_update_result.insert(tk.END, f"-> PatientId = {pid}, FirstName = {first}, LastName = {last}\n")
+            self.create_patient_update_result.insert(tk.END, f"-> PatientId = {pid}, FirstName = {first}, LastName = {last}, Sex = {sex}\n")
             self.create_patient_update_result.configure(state='disabled')  # disable editing again
             messagebox.showinfo("Success", "New patient inserted.")
         except Exception as e:
