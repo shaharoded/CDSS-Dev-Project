@@ -235,7 +235,7 @@ class Mediator:
 
         Args:
             patient_id (str or int): Patient identifier in the database.
-            snapshot_date (str or datetime, optional): View of the DB up to this date (default: today).
+            snapshot_date (str, optional): View of the DB up to this date (default: today).
 
         Returns:
             pd.DataFrame: All records in unified format:

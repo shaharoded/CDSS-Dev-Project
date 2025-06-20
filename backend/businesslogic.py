@@ -14,6 +14,7 @@ from datetime import datetime
 
 # Local Code
 from backend.dataaccess import DataAccess
+from backend.mediator import Mediator
 from backend.backend_config import *  # all query paths
 
 data = DataAccess()
@@ -526,4 +527,70 @@ class PatientRecord:
         )
 
         return valid_start_time # returning the actual record deleted for logging on screen
+    
 
+def abstract_data(snapshot_date):
+    """
+    Runs the Mediator abstraction engine for all patients in the DB as of the given snapshot_date.
+    Stores the resulting records in the AbstractedMeasurements table.
+    """
+
+    # Validate and normalize snapshot_date
+    if isinstance(snapshot_date, str) and len(snapshot_date) <= 10:
+        snapshot_date = validate_datetime(snapshot_date)
+        snapshot_date = snapshot_date.replace(hour=23, minute=59, second=59)
+    elif isinstance(snapshot_date, str):
+        snapshot_date = validate_datetime(snapshot_date)
+
+    snapshot_date = snapshot_date.strftime('%Y-%m-%d %H:%M:%S')
+
+    # Clear existing values in Abstraction table, if exists
+    data.execute_query("DELETE FROM AbstractedMeasurements", ())
+
+    # Get all patients
+    all_patients = data.fetch_records("SELECT PatientId FROM Patients", ())
+    if not all_patients:
+        raise ValueError("No patients found in the database.")
+
+    all_results = []
+    for (patient_id,) in all_patients:
+        engine = Mediator()
+        try:
+            df = engine.run(patient_id, snapshot_date=snapshot_date)
+            all_results.append(df)
+        except Exception as e:
+            raise Exception(f"Exception in data abstraction for patient {patient_id}: {e}")
+
+    if not all_results:
+        raise ValueError("Your DB is empty at the requested snapshot so no abstractions were calculated.")
+
+    final_df = pd.concat(all_results, ignore_index=True)
+
+    # Insert abstracted data row-by-row
+    for _, row in final_df.iterrows():
+        data.execute_query(
+            INSERT_ABSTRACTED_MEASUREMENT_QUERY,
+            (
+                str(row['PatientId']),
+                str(row['LOINC-Code']),
+                str(row['Concept Name']),
+                str(row['Value']),
+                str(row['StartDateTime']),
+                str(row['EndDateTime']),
+            )
+        )
+
+
+if __name__ == "__main__":
+    snapshot_date = "2025-06-20"
+    abstract_data(snapshot_date)
+
+    # --- Validate results ---
+    data = DataAccess()
+    preview = data.fetch_records("SELECT * FROM AbstractedMeasurements ORDER BY StartDateTime LIMIT 20", ())
+    if not preview:
+        print("[Info] No records found in AbstractedMeasurements.")
+    else:
+        print("[Info] Preview of inserted abstracted records:")
+        for row in preview:
+            print(row)
