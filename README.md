@@ -34,7 +34,7 @@ cdss-dev-project/
 │   └── userinterface.py      # UI
 │
 ├── README.md
-├── requirements.txt
+└── requirements.txt
 ```
 
 ## Installation
