@@ -3,7 +3,6 @@ import glob
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 import pandas as pd
-from backend import dataaccess
 from dateutil import parser as dateparser
 
 # Local Code
