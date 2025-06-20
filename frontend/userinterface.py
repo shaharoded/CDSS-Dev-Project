@@ -219,16 +219,16 @@ class Application(tk.Tk):
                 self.search_result.insert(tk.END, "-> No measurement records found for this patient under these conditions.\n")
                 return
 
-            self.search_result.insert(tk.END, f"{'LOINC-Code':<10} {'Concept Name':<20} {'Value':<19} {'Unit':<5} {'Start Time':<20} {'Transaction Time':<20}\n")
+            self.search_result.insert(tk.END, f"{'LOINC-Code':<10} {'Concept Name':<18} {'Value':<15} {'Unit':<9} {'Start Time':<20} {'Transaction Time':<20}\n")
             self.search_result.insert(tk.END, "-" * 98 + "\n")
             for row in results:
                 loinc, concept, value, unit, valid_start, insertion_time = row
-                concept = concept[:16] + '...' if len(concept) > 16 else concept
-                value = value[:19] + '...' if len(value) > 19 else value
-                unit = unit[:5] + '...' if len(unit) > 5 else unit
+                concept = concept[:15] + '...' if len(concept) > 18 else concept
+                value = value[:12] + '...' if len(value) > 15 else value
+                unit = unit[:6] + '...' if len(unit) > 9 else unit
                 self.search_result.insert(
                     tk.END,
-                    f"{loinc:<10} {concept:<20} {value:<19} {unit:<5} {valid_start:<20} {insertion_time:<20}\n"
+                    f"{loinc:<10} {concept:<18} {value:<15} {unit:<9} {valid_start:<20} {insertion_time:<20}\n"
                 )
             self.search_result.configure(state='disabled')  # disable editing again
         except Exception as e:

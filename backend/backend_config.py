@@ -36,4 +36,7 @@ GET_LOINC_BY_COMPONENT_FL_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries
 GET_LOINC_BY_COMPONENT_FM_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_loinc_by_component_from_measurements.sql')
 GET_LOINC_ALLOWED_VALUES = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_loinc_allowed_values.sql') # From LOINC table
 GET_LATEST_VALIDTIME_FOR_DAY_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'select_latest_validtime_for_day.sql')
+GET_PATIENT_PARAMS_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_patient_params.sql')
 
+# TAK Folder
+TAK_FOLDER = os.path.join(PROJECT_ROOT, 'backend', 'taks')

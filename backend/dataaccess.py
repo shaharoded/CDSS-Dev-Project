@@ -139,6 +139,14 @@ class DataAccess:
         # Deduplicate patients
         unique_patients = patients_df[['PatientId', 'First name', 'Last name', 'Sex']].drop_duplicates()
 
+        # Deduplicate measures
+        measurements_df = measurements_df.sort_values(by='Transaction time', ascending=False)
+        measurements_df = measurements_df.drop_duplicates(
+            subset=['PatientId', 'LOINC-NUM', 'Valid start time'],
+            keep='first'
+        )
+        measurements_df = measurements_df.sort_values(by=['PatientId', 'Valid start time'])
+
         # Insert unique patients
         for _, row in unique_patients.iterrows():
             self.execute_query(

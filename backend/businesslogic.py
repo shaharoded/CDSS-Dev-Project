@@ -73,10 +73,15 @@ def validate_value(loinc_num, value, allowed_values):
     """
     allowed_value_raw = allowed_values[0][0] if allowed_values else None
 
-    if allowed_value_raw is None or allowed_value_raw.strip().upper() == 'NUM':
+    if allowed_value_raw is None:
         # No validation needed — numerical or unrestricted
         pass
-
+    elif allowed_value_raw.strip().upper() == 'NUM':
+        # Validate that value is parseable as number
+        try:
+            float(value)  # or int(value) if only integers are allowed
+        except (ValueError, TypeError):
+            raise ValueError(f"Expected a numeric value, but got: {value}")
     else:
         try:
             # Convert stringified list to actual list (e.g., '["A", "B"]' → ['A', 'B'])
@@ -265,7 +270,7 @@ class PatientRecord:
         if not value:
             raise ValueError("Measurement value must be provided and cannot be empty.")
         if not unit:
-            raise ValueError("Measurement unit must be provided and cannot be empty.")
+            raise ValueError("Measurement unit must be provided and cannot be empty. Hint: use 'none' if no valid unit exists.")
         if not valid_start_time:
             raise ValueError("Measurement valid start time must be provided and cannot be empty.")
         if not component and not loinc_num:
