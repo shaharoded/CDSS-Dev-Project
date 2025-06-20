@@ -31,7 +31,7 @@ cdss-dev-project/
 │
 ├── frontend/
 │   ├── images/               # Images used for design
-│   └── userinterface.py      # UI
+│   └── userinterface.py      # UI - Data management system + recommendation board
 │
 ├── README.md
 └── requirements.txt
