@@ -12,7 +12,7 @@
   </condition>
 
   <condition sex="Female">
-    <persistence good-before="1h" good-after="72h" />
+    <persistence good-before="1h" good-after="24h" />
 
     <rule value="Severe Anemia" min="0" max="9" />
     <rule value="Moderate Anemia" min="9" max="11" />

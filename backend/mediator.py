@@ -223,18 +223,75 @@ class Mediator:
 
         return patient_records, param_dict
 
+    def _merge_abstracted_intervals(self, patient_id, df, relevance_hours):
+        """
+        Merge overlapping abstracted intervals row-by-row, extending each edge by a 'relevance' duration (e.g., 24h),
+        but prevent overlaps between different intervals of the same LOINC code and different values.
 
-    def run(self, patient_id, snapshot_date=None):
+        Args:
+            patient_id (str): The patient ID to which the abstracted records belong to.
+            df (pd.DataFrame): Abstracted intervals with columns ['LOINC-Code', 'Value', 'StartDateTime', 'EndDateTime']
+            relevance_hours (int): Number of hours to extend interval edges (default: 24)
+
+        Returns:
+            pd.DataFrame: Merged intervals with extended relevance windows, no overlap between distinct values.
+        """
+        df['StartDateTime'] = pd.to_datetime(df['StartDateTime'])
+        df['EndDateTime'] = pd.to_datetime(df['EndDateTime'])
+
+        # Sort by LOINC-Code, StartDateTime, then Value for deterministic behavior
+        df = df.sort_values(by=['LOINC-Code', 'StartDateTime', 'Value'])
+
+        merged_records = []
+        current = None
+
+        for _, row in df.iterrows():
+            row = row.copy()
+            # Extend the row's end by relevance hours
+            row['EndDateTime'] += timedelta(hours=relevance_hours)
+
+            if current is None:
+                current = row
+                continue
+
+            same_code = row['LOINC-Code'] == current['LOINC-Code']
+            same_value = row['Value'] == current['Value']
+            overlap_or_touching = row['StartDateTime'] <= current['EndDateTime']
+
+            if same_code and same_value and overlap_or_touching:
+                # Merge by extending current interval
+                current['EndDateTime'] = max(current['EndDateTime'], row['EndDateTime'])
+            else:
+                # No merge: truncate current to avoid overlap if needed
+                if same_code and row['StartDateTime'] < current['EndDateTime']:
+                    current['EndDateTime'] = row['StartDateTime']
+                merged_records.append(current)
+                current = row
+
+        if current is not None:
+            merged_records.append(current)
+
+        df_merged = pd.DataFrame(merged_records)
+        if not df_merged.empty:
+            df_merged['PatientId'] = patient_id
+            df_merged['Source'] = 'abstracted'
+        return df_merged
+
+
+    def run(self, patient_id, snapshot_date=None, relevance=24):
         """
         Run the temporal abstraction engine for a single patient.
 
         Retrieves raw measurement records, applies applicable abstraction rules,
         merges overlapping abstracted intervals, and returns both abstracted and untouched
         measurement records in a unified format.
+        Will set "relevance" duration of 24h for raw records as well as to abstracted records, 
+        which may have a longer duration, depends on the intervals.
 
         Args:
             patient_id (str or int): Patient identifier in the database.
             snapshot_date (str, optional): View of the DB up to this date (default: today).
+            relevance (int, optional): Number of hours each measure is relevant for (default: 24 hours).
 
         Returns:
             pd.DataFrame: All records in unified format:
@@ -271,52 +328,50 @@ class Mediator:
                 continue
 
             result = rule.apply(rule_df)
-            abstracted_records.extend(result['abstracted'])
+            for row in result['abstracted']:
+                abstracted_records.append({
+                    "LOINC-Code": rule.loinc_code,
+                    "Concept Name": rule.abstraction_name,
+                    "Value": row["Value"],
+                    "StartDateTime": row["StartDateTime"],
+                    "EndDateTime": row["EndDateTime"]
+                })
             used_indices.update(result['used_indices'])
 
-        # Step 4: Merge overlapping abstracted intervals
-        merged_records = []
+        # Step 4: Merge abstracted intervals (safely across all LOINC codes)
         if abstracted_records:
-            df = pd.DataFrame(abstracted_records)
-            df['StartDateTime'] = pd.to_datetime(df['StartDateTime'])
-            df['EndDateTime'] = pd.to_datetime(df['EndDateTime'])
-            df = df.sort_values(by=['LOINC-Code', 'Value', 'StartDateTime'])
-
-            for (_, value), group in df.groupby(['LOINC-Code', 'Value']):
-                current = None
-                for _, row in group.iterrows():
-                    if current is None:
-                        current = row
-                    elif row['StartDateTime'] <= current['EndDateTime']:
-                        current['EndDateTime'] = max(current['EndDateTime'], row['EndDateTime'])
-                    else:
-                        current['Source'] = 'abstracted'
-                        current['PatientId'] = patient_id
-                        merged_records.append(current)
-                        current = row
-                if current is not None:
-                    current['Source'] = 'abstracted'
-                    current['PatientId'] = patient_id
-                    merged_records.append(current)
+            merged_records = self._merge_abstracted_intervals(
+                patient_id, pd.DataFrame(abstracted_records), relevance_hours=relevance)
+        else:
+            merged_records = pd.DataFrame(columns=[
+                "PatientId", "LOINC-Code", "Concept Name", "Value", "StartDateTime", "EndDateTime", "Source"
+            ])
 
         # Step 5: Process untouched raw records
         untouched = raw_df[~raw_df.index.isin(used_indices)].copy()
         untouched['Concept Name'] = untouched['ConceptName']
         untouched['StartDateTime'] = untouched['Valid start time']
-        untouched['EndDateTime'] = untouched['Valid start time']
+        untouched['EndDateTime'] = pd.to_datetime(untouched['Valid start time']) + timedelta(hours=relevance)
         untouched['Source'] = 'raw'
         untouched['PatientId'] = patient_id
-        untouched = untouched.rename(columns={"Value": "Value", "LOINC-NUM": "LOINC-Code"})
+        untouched = untouched.rename(columns={"LOINC-NUM": "LOINC-Code"})
 
-        # Step 6: Combine all and return
-        final_df = pd.concat([
-            pd.DataFrame(merged_records),
+        # Step 6: Fix types before merge
+        if not merged_records.empty:
+            merged_records['StartDateTime'] = pd.to_datetime(merged_records['StartDateTime'], errors='coerce')
+            merged_records['EndDateTime'] = pd.to_datetime(merged_records['EndDateTime'], errors='coerce')
+
+        if not untouched.empty:
+            untouched['StartDateTime'] = pd.to_datetime(untouched['StartDateTime'], errors='coerce')
+            untouched['EndDateTime'] = pd.to_datetime(untouched['EndDateTime'], errors='coerce')
+
+        # Step 7: Combine all and return
+        frames = [
+            merged_records,
             untouched[["PatientId", "LOINC-Code", "Concept Name", "Value", "StartDateTime", "EndDateTime", "Source"]]
-        ])
+        ]
 
-        # Ensure StartDateTime and EndDateTime are all datetimes
-        final_df["StartDateTime"] = pd.to_datetime(final_df["StartDateTime"])
-        final_df["EndDateTime"] = pd.to_datetime(final_df["EndDateTime"])
+        final_df = pd.concat([df for df in frames if not df.empty], ignore_index=True)
 
         return final_df.sort_values(by="StartDateTime").reset_index(drop=True)
     
