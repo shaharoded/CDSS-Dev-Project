@@ -226,5 +226,14 @@ class DataAccess:
             print(f"[Info]: Table '{table_name}' - Rows: {count}")
 
 if __name__ == '__main__':
-    da = DataAccess()
+    data = DataAccess()
+    
+    # --- Validate results ---
+    preview = data.fetch_records("SELECT * FROM Measurements WHERE PatientId=147258369 ORDER BY StartDateTime LIMIT 20", ())
+    if not preview:
+        print("[Info] No records found in Measurements table.")
+    else:
+        print("[Info] Preview of inserted records for patient 147258369:")
+        for row in preview:
+            print(row)
 

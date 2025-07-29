@@ -582,12 +582,12 @@ def abstract_data(snapshot_date):
 
 
 if __name__ == "__main__":
-    snapshot_date = "2025-06-20"
+    data = DataAccess()
+    snapshot_date = "2025-07-30"
     abstract_data(snapshot_date)
 
     # --- Validate results ---
-    data = DataAccess()
-    preview = data.fetch_records("SELECT * FROM AbstractedMeasurements ORDER BY StartDateTime LIMIT 20", ())
+    preview = data.fetch_records("SELECT * FROM AbstractedMeasurements WHERE PatientId=147258369 ORDER BY StartDateTime LIMIT 20", ())
     if not preview:
         print("[Info] No records found in AbstractedMeasurements.")
     else:
