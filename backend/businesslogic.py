@@ -556,7 +556,8 @@ def abstract_data(snapshot_date):
     for (patient_id,) in all_patients:
         engine = Mediator()
         try:
-            df = engine.run(patient_id, snapshot_date=snapshot_date)
+            df = engine.run(patient_id, snapshot_date=snapshot_date).dropna(axis=1, how='all')
+            if df.empty: continue
             all_results.append(df)
         except Exception as e:
             raise Exception(f"Exception in data abstraction for patient {patient_id}: {e}")
@@ -583,11 +584,11 @@ def abstract_data(snapshot_date):
 
 if __name__ == "__main__":
     data = DataAccess()
-    snapshot_date = "2025-07-30"
-    abstract_data(snapshot_date)
+    # snapshot_date = "2025-01-04 23:59:59"
+    # abstract_data(snapshot_date)
 
     # --- Validate results ---
-    preview = data.fetch_records("SELECT * FROM AbstractedMeasurements WHERE PatientId=147258369 ORDER BY StartDateTime LIMIT 20", ())
+    preview = data.fetch_records("SELECT * FROM AbstractedMeasurements WHERE PatientId=123456782 AND LoincNum='39106-0' ORDER BY StartDateTime LIMIT 100", ())
     if not preview:
         print("[Info] No records found in AbstractedMeasurements.")
     else:

@@ -247,9 +247,6 @@ class Mediator:
 
         for _, row in df.iterrows():
             row = row.copy()
-            # Extend the row's end by relevance hours
-            row['EndDateTime'] += timedelta(hours=relevance_hours)
-
             if current is None:
                 current = row
                 continue

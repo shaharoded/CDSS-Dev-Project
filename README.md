@@ -77,19 +77,19 @@ pip install -r requirements.txt
 
 Once you updates the __main__ of each module:
 
-You can run the folowing PowerShell command in the root repository to initiate the DataAccess class and build your DB:
+You can run the following PowerShell command in the root repository to initiate the DataAccess class and build your DB:
 ```bash
 (from root)
 python -m backend.dataaccess
 ```
 
-You can run the folowing PowerShell command in the root repository to test your business logic:
+You can run the following PowerShell command in the root repository to test your business logic:
 ```bash
 (from root)
 python -m backend.businesslogic
 ```
 
-You can run the folowing PowerShell command in the root repository to test your abstraction logic:
+You can run the following PowerShell command in the root repository to test your abstraction logic:
 ```bash
 (from root)
 python -m backend.mediator
