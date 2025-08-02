@@ -31,12 +31,25 @@ CHECK_TABLE_EXISTS_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'che
 SEARCH_HISTORY_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_history.sql')
 UPDATE_MEASUREMENT_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'update_measurement.sql') # In-place value update, currently irrelevant.
 UPDATE_DELETION_TIME_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'update_record_deletion_time.sql')
+GET_ALL_PATIENTS_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get._all_patients.sql')
 GET_EXISTING_UNIT_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_existing_unit.sql')
 GET_LOINC_BY_COMPONENT_FL_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_loinc_by_component_from_loinc.sql')
 GET_LOINC_BY_COMPONENT_FM_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_loinc_by_component_from_measurements.sql')
 GET_LOINC_ALLOWED_VALUES = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_loinc_allowed_values.sql') # From LOINC table
 GET_LATEST_VALIDTIME_FOR_DAY_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'select_latest_validtime_for_day.sql')
 GET_PATIENT_PARAMS_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_patient_params.sql')
-
+GET_LATEST_ABSTRACTED_VALUE_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_latest_abstracted_value.sql')
+GET_PATIENT_ABSTRACTED_DATA_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_patient_abstracted_data.sql')
+GET_PATIENTS_WITH_ABSTRACTED_DATA_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_patients_with_abstracted_data.sql')
 # TAK Folder
 TAK_FOLDER = os.path.join(PROJECT_ROOT, 'backend', 'taks')
+
+# rules
+RULES_FOLDER = os.path.join(PROJECT_ROOT, 'backend', 'rules')
+# Declarative Knowledge (First-tier rules)
+DECLARATIVE_RULES_FOLDER = os.path.join(RULES_FOLDER, 'declarative knowledge')
+HEMATOLOGICAL_RULES = os.path.join(DECLARATIVE_RULES_FOLDER, 'hematological_rules.json')
+SYSTEMIC_TOXICITY_RULES = os.path.join(DECLARATIVE_RULES_FOLDER, 'toxicity_rules.json')
+# Procedural Knowledge (Second-tier rules)
+PROCEDURAL_RULES_FOLDER = os.path.join(RULES_FOLDER, 'procedural knowledge')
+TREATMENT_RULES = os.path.join(PROCEDURAL_RULES_FOLDER, 'treatment_rules.json')
