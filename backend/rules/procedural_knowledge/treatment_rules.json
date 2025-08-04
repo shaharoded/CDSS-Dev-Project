@@ -1,58 +1,84 @@
 {
   "rule_name": "treatment_recommendations",
-  "hierarchy_level": "second_tier",
+  "execution_order": 2,
   "synthetic_loinc": "TREAT-001",
-  "description": "4:1 Treatment table mapping Gender + Hemoglobin-state + Hematological-state + Systematic Toxicity to treatment recommendations",
-  "input_parameters": ["gender", "Hemoglobin_Level", "hematological_state", "systemic_toxicity"],
+  "description": "4:1 AND Treatment table mapping Sex (Gender) + Hemoglobin-level + Hematological-state + Systemic Toxicity to treatment recommendations",
+  "note": "Treatment recommendations based on 4 input parameters. Returns list of treatment actions.",
+  "logic_type": "AND",
+  "input_parameters": ["sex", "Hemoglobin_Level", "hematological_state", "systemic_toxicity"],
   "rules": {
-    "Male,Severe Anemia,Pancytopenia,GRADE I": [
-      "Measure BP once a week"
-    ],
-    "Male,Moderate Anemia,Anemia,GRADE II": [
-      "Measure BP every 3 days",
-      "Give aspirin 5g twice a week"
-    ],
-    "Male,Mild Anemia,Suspected Leukemia,GRADE III": [
-      "Measure BP every day",
-      "Give aspirin 15g every day",
-      "Diet consultation"
-    ],
-    "Male,Normal Hemoglobin,Leukemoid reaction,GRADE IV": [
-      "Measure BP twice a day",
-      "Give aspirin 15g every day",
-      "Exercise consultation",
-      "Diet consultation"
-    ],
-    "Male,Polycytemia,Suspected Polycytemia Vera,GRADE IV": [
-      "Measure BP every hour",
-      "Give 1 gr magnesium every hour",
-      "Exercise consultation",
-      "Call family"
-    ],
-    "Female,Severe Anemia,Pancytopenia,GRADE I": [
-      "Measure BP every 3 days"
-    ],
-    "Female,Moderate Anemia,Anemia,GRADE II": [
-      "Measure BP every 3 days",
-      "Give Celectone 2g twice a day for two days drug treatment"
-    ],
-    "Female,Mild Anemia,Suspected Leukemia,GRADE III": [
-      "Measure BP every day",
-      "Give 1 gr magnesium every 3 hours",
-      "Diet consultation"
-    ],
-    "Female,Normal Hemoglobin,Leukemoid reaction,GRADE IV": [
-      "Measure BP twice a day",
-      "Give 1 gr magnesium every hour",
-      "Exercise consultation",
-      "Diet consultation"
-    ],
-    "Female,Polycytemia,Suspected Polycytemia Vera,GRADE IV": [
-      "Measure BP every hour",
-      "Give 1 gr magnesium every hour",
-      "Exercise consultation",
-      "Call help"
-    ]
+    "cond-1": {
+      "sex": ["Male"],
+      "Hemoglobin_Level": ["Severe Anemia"],
+      "hematological_state": ["Pancytopenia"],
+      "systemic_toxicity": ["GRADE I"]
+    },
+    "cond-2": {
+      "sex": ["Male"],
+      "Hemoglobin_Level": ["Moderate Anemia"],
+      "hematological_state": ["Anemia"],
+      "systemic_toxicity": ["GRADE II"]
+    },
+    "cond-3": {
+      "sex": ["Male"],
+      "Hemoglobin_Level": ["Mild Anemia"],
+      "hematological_state": ["Suspected Leukemia"],
+      "systemic_toxicity": ["GRADE III"]
+    },
+    "cond-4": {
+      "sex": ["Male"],
+      "Hemoglobin_Level": ["Normal Hemoglobin"],
+      "hematological_state": ["Leukemoid reaction"],
+      "systemic_toxicity": ["GRADE IV"]
+    },
+    "cond-5": {
+      "sex": ["Male"],
+      "Hemoglobin_Level": ["Polycytemia"],
+      "hematological_state": ["Suspected Polycytemia Vera"],
+      "systemic_toxicity": ["GRADE IV"]
+    },
+    "cond-6": {
+      "sex": ["Female"],
+      "Hemoglobin_Level": ["Severe Anemia"],
+      "hematological_state": ["Pancytopenia"],
+      "systemic_toxicity": ["GRADE I"]
+    },
+    "cond-7": {
+      "sex": ["Female"],
+      "Hemoglobin_Level": ["Moderate Anemia"],
+      "hematological_state": ["Anemia"],
+      "systemic_toxicity": ["GRADE II"]
+    },
+    "cond-8": {
+      "sex": ["Female"],
+      "Hemoglobin_Level": ["Mild Anemia"],
+      "hematological_state": ["Suspected Leukemia"],
+      "systemic_toxicity": ["GRADE III"]
+    },
+    "cond-9": {
+      "sex": ["Female"],
+      "Hemoglobin_Level": ["Normal Hemoglobin"],
+      "hematological_state": ["Leukemoid reaction"],
+      "systemic_toxicity": ["GRADE IV"]
+    },
+    "cond-10": {
+      "sex": ["Female"],
+      "Hemoglobin_Level": ["Polycytemia"],
+      "hematological_state": ["Suspected Polycytemia Vera"],
+      "systemic_toxicity": ["GRADE IV"]
+    }
   },
-  "note": "Treatment recommendations based on 4 input parameters. Returns list of treatment actions."
+  "values": {
+    "cond-1": ["Measure BP once a week"],
+    "cond-2": ["Measure BP every 3 days", "Give aspirin 5g twice a week"],
+    "cond-3": ["Measure BP every day", "Give aspirin 15g every day", "Diet consultation"],
+    "cond-4": ["Measure BP twice a day", "Give aspirin 15g every day", "Exercise consultation", "Diet consultation"],
+    "cond-5": ["Measure BP every hour", "Give 1 gr magnesium every hour", "Exercise consultation", "Call family"],
+    "cond-6": ["Measure BP every 3 days"],
+    "cond-7": ["Measure BP every 3 days", "Give Celectone 2g twice a day for two days drug treatment"],
+    "cond-8": ["Measure BP every day", "Give 1 gr magnesium every 3 hours", "Diet consultation"],
+    "cond-9": ["Measure BP twice a day", "Give 1 gr magnesium every hour", "Exercise consultation", "Diet consultation"],
+    "cond-10": ["Measure BP every hour", "Give 1 gr magnesium every hour", "Exercise consultation", "Call help"]
+  },
+  "fallback_value": ["No match to the protocol -> No treatment suggestion"]
 }

@@ -4,9 +4,9 @@
 -- Filters by time window (StartDateTime <= snapshot AND EndDateTime >= start_time)
 
 SELECT PatientId,
-       LoincNum as 'LOINC-Code',
-       ConceptName as 'Concept Name',
-       AbstractedValue as 'Value',
+       LoincNum,
+       ConceptName,
+       AbstractedValue,
        StartDateTime,
        EndDateTime
 FROM AbstractedMeasurements

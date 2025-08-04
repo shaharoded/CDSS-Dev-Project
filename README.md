@@ -101,10 +101,11 @@ You can run the following PowerShell command in the root repository to test your
 python -m backend.businesslogic
 ```
 
-You can run the following PowerShell command in the root repository to test your abstraction logic:
+You can run the following PowerShell command in the root repository to test your abstraction logic \ rules logic:
 ```bash
 (from root)
 python -m backend.mediator
+python -m backend.rule_processor (currently no __main__)
 ```
 
 Need to remove the DB you created?

@@ -560,6 +560,7 @@ def abstract_data(snapshot_date=None):
     all_results = []
     for (patient_id,) in all_patients:
         try:
+            patient_id = str(patient_id).strip()
             df = engine.run(patient_id, snapshot_date=snapshot_date).dropna(axis=1, how='all')
             if df.empty: continue
             all_results.append(df)
@@ -578,7 +579,7 @@ def abstract_data(snapshot_date=None):
             (
                 str(row['PatientId']),
                 str(row['LOINC-Code']),
-                str(row['Concept Name']),
+                str(row['ConceptName']),
                 str(row['Value']),
                 str(row['StartDateTime']),
                 str(row['EndDateTime']),
@@ -611,51 +612,48 @@ def analyze_patient_clinical_state(snapshot_date=None):
 
     snapshot_str = snapshot_date.strftime('%Y-%m-%d %H:%M:%S')
 
-    # run data abstraction for the input snapshot time
-    try:
-        abstract_data(snapshot_str)
-    except Exception as e:
-        raise Exception(f"Exception in data abstraction: {e}")
+    # # Run data abstraction for the input snapshot time (results saved in place in the DB)
+    # try:
+    #     abstract_data(snapshot_str)
+    # except Exception as e:
+    #     raise Exception(f"Exception in data abstraction: {e}")
 
     # Get all patients who have abstracted time intervals during the snapshot time (relevant events from the abstraction results)
     # Remember - Intervals retain for 24h after last raw record
     df = pd.DataFrame(data.fetch_records(
         GET_ABSTRACTED_DATA_QUERY,
         (snapshot_str, snapshot_str)), columns=[
-                'PatientId', 'LOINC-Code', 'Concept Name', 'Value', 'StartDateTime', 'EndDateTime'
+                'PatientId', 'LOINC-Code', 'ConceptName', 'Value', 'StartDateTime', 'EndDateTime'
             ])
 
     if df.empty:
-        raise ValueError("No patients found with relevant data in the selected date-time")
+        raise ValueError(f"No patients found with relevant data in the selected snapshot date-time {snapshot_str}")
 
     all_results = {}
 
     for patient_id, patient_data in df.groupby('PatientId'):
-        try:
-            # Get the abstracted records of 1 patient
-            # Keep only most recent occurrence of each LOINC code
-            patient_data['StartDateTime'] = pd.to_datetime(patient_data['StartDateTime'])
-            patient_data = patient_data.sort_values('StartDateTime', ascending=False).drop_duplicates('LOINC-Code', keep='first')
+        if not patient_id == '911538590':
+            continue
+        # Get the abstracted records of 1 patient
+        # Keep only most recent occurrence of each LOINC code
+        patient_data['StartDateTime'] = pd.to_datetime(patient_data['StartDateTime'])
+        patient_data['EndDateTime'] = pd.to_datetime(patient_data['EndDateTime'])
+        patient_data = patient_data.sort_values('StartDateTime', ascending=False).drop_duplicates('LOINC-Code', keep='first')
 
-            # Process rules for this patient
-            patient_results = processor.process_patient_rules(patient_id, patient_data)
-            all_results[patient_id] = patient_results
-
-        except Exception as e:
-            print(f"[Error] Failed to process rules for patient {patient_id}: {e}")
-            all_results[patient_id] = {
-                "PatientId": patient_id,
-                "hematological_state": "Error",
-                "systemic_toxicity": "Error",
-                "treatment_recommendations": "Error"
-            }
+        # Process rules for this patient
+        processor.debug_patient_rule_flow(patient_id, patient_data, snapshot_date)
+        return
+        patient_results = processor.run(patient_id=patient_id, 
+                                        df=patient_data, 
+                                        snapshot_date=snapshot_date)
+        all_results[patient_id] = patient_results
 
     return all_results, snapshot_str
 
 
 
 if __name__ == "__main__":
-    snapshot_date = "2025-08-02"
+    snapshot_date = "2025-08-02 23:59:59"
 
     # # --- Validate results ---
     # preview = data.fetch_records("SELECT * FROM AbstractedMeasurements WHERE PatientId=123456782 AND LoincNum='39106-0' ORDER BY StartDateTime LIMIT 100", ())

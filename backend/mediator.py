@@ -102,7 +102,7 @@ class TAKRule:
                 end_time = dateparser.parse(row['Valid start time']) + self.good_after
                 abstracted_records.append({
                     "LOINC-Code": self.loinc_code,
-                    "Concept Name": self.abstraction_name,
+                    "ConceptName": self.abstraction_name,
                     "Value": match,
                     "StartDateTime": start_time.strftime('%Y-%m-%d %H:%M:%S'),
                     "EndDateTime": end_time.strftime('%Y-%m-%d %H:%M:%S')
@@ -359,13 +359,13 @@ class Mediator:
 
         Returns:
             pd.DataFrame: All records in unified format:
-                ['PatientId', 'LOINC-Code', 'Concept Name', 'Value', 'StartDateTime', 'EndDateTime', 'Source']
+                ['PatientId', 'LOINC-Code', 'ConceptName', 'Value', 'StartDateTime', 'EndDateTime', 'Source']
         """
         # Step 1: Retrieve raw measurements + patient attributes (e.g., sex)
         raw_rows, params = self._get_patient_records(patient_id, snapshot_date)
         if not raw_rows:
             return pd.DataFrame(columns=[
-                "PatientId", "LOINC-Code", "Concept Name", "Value", "StartDateTime", "EndDateTime", "Source"
+                "PatientId", "LOINC-Code", "ConceptName", "Value", "StartDateTime", "EndDateTime", "Source"
             ])
 
         # Step 2: Convert raw rows to DataFrame
@@ -392,7 +392,7 @@ class Mediator:
             for row in result['abstracted']:
                 abstracted_records.append({
                     "LOINC-Code": rule.loinc_code,
-                    "Concept Name": rule.abstraction_name,
+                    "ConceptName": rule.abstraction_name,
                     "Value": row["Value"],
                     "StartDateTime": row["StartDateTime"],
                     "EndDateTime": row["EndDateTime"]
@@ -405,12 +405,12 @@ class Mediator:
                 patient_id, pd.DataFrame(abstracted_records))
         else:
             merged_records = pd.DataFrame(columns=[
-                "PatientId", "LOINC-Code", "Concept Name", "Value", "StartDateTime", "EndDateTime", "Source"
+                "PatientId", "LOINC-Code", "ConceptName", "Value", "StartDateTime", "EndDateTime", "Source"
             ])
 
         # Step 5: Process untouched raw records
         untouched = raw_df[~raw_df.index.isin(used_indices)].copy()
-        untouched['Concept Name'] = untouched['ConceptName']
+        untouched['ConceptName'] = untouched['ConceptName']
         untouched['StartDateTime'] = untouched['Valid start time']
         untouched['EndDateTime'] = pd.to_datetime(untouched['Valid start time']) + timedelta(hours=relevance)
         untouched['Source'] = 'raw'
@@ -429,7 +429,7 @@ class Mediator:
         # Step 7: Combine all and return
         frames = [
             merged_records,
-            untouched[["PatientId", "LOINC-Code", "Concept Name", "Value", "StartDateTime", "EndDateTime", "Source"]]
+            untouched[["PatientId", "LOINC-Code", "ConceptName", "Value", "StartDateTime", "EndDateTime", "Source"]]
         ]
 
         final_df = pd.concat([df for df in frames if not df.empty], ignore_index=True)

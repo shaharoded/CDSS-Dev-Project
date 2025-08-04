@@ -1,25 +1,53 @@
-
 {
   "rule_name": "hematological_state",
-  "hierarchy_level": "first_tier",
+  "execution_order": 1,
   "synthetic_loinc": "HEMA-001",
   "description": "2:1 AND table for Hemoglobin + WBC",
   "input_parameters": ["Hemoglobin_Level", "WBC_Level"],
+  "logic_type": "AND",
   "rules": {
-    "Severe Anemia,Low": "Pancytopenia",
-    "Moderate Anemia,Low": "Pancytopenia",
-    "Mild Anemia,Low": "Pancytopenia",
-    "Severe Anemia,Medium": "Anemia",
-    "Moderate Anemia,Medium": "Anemia",
-    "Mild Anemia,Medium": "Anemia",
-    "Normal Hemoglobin,Low": "Leukopenia",
-    "Normal Hemoglobin,Medium": "Normal",
-    "Normal Hemoglobin,High": "Leukemoid reaction",
-    "Polycytemia,Low": "Suspected Polycytemia Vera",
-    "Polycytemia,Medium": "Polyhemia",
-    "Polycytemia,High": "Suspected Polycytemia Vera",
-    "Severe Anemia,High": "Suspected Leukemia",
-    "Moderate Anemia,High": "Suspected Leukemia",
-    "Mild Anemia,High": "Suspected Leukemia"
-  }
+    "cond-1": {
+      "Hemoglobin_Level": ["Severe Anemia", "Moderate Anemia", "Mild Anemia"],
+      "WBC_Level": ["Low"]
+    },
+    "cond-2": {
+      "Hemoglobin_Level": ["Severe Anemia", "Moderate Anemia", "Mild Anemia"],
+      "WBC_Level": ["Medium"]
+    },
+    "cond-3": {
+      "Hemoglobin_Level": ["Severe Anemia", "Moderate Anemia", "Mild Anemia"],
+      "WBC_Level": ["High"]
+    },
+    "cond-4": {
+      "Hemoglobin_Level": ["Normal Hemoglobin"],
+      "WBC_Level": ["Low"]
+    },
+    "cond-5": {
+      "Hemoglobin_Level": ["Normal Hemoglobin"],
+      "WBC_Level": ["Medium"]
+    },
+    "cond-6": {
+      "Hemoglobin_Level": ["Normal Hemoglobin"],
+      "WBC_Level": ["High"]
+    },
+    "cond-7": {
+      "Hemoglobin_Level": ["Polycytemia"],
+      "WBC_Level": ["Low", "High"]
+    },
+    "cond-8": {
+      "Hemoglobin_Level": ["Polycytemia"],
+      "WBC_Level": ["Medium"]
+    }
+  },
+  "values": {
+    "cond-1": "Pancytopenia",
+    "cond-2": "Anemia",
+    "cond-3": "Suspected Leukemia",
+    "cond-4": "Leukopenia",
+    "cond-5": "Normal",
+    "cond-6": "Leukemoid reaction",
+    "cond-7": "Suspected Polycytemia Vera",
+    "cond-8": "Polyhemia"
+  },
+  "fallback_value": "Unknown"
 }
