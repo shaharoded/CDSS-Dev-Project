@@ -283,13 +283,15 @@ class Mediator:
         patient_info = self.db.fetch_records(GET_PATIENT_PARAMS_QUERY, (patient_id,))
         param_dict = {}
         if patient_info:
-            columns = ['sex']
-            param_dict = dict(zip(columns, patient_info[0]))
+            row = patient_info[0]  # Single patient expected
+            # Gives columns returned by the last query, lowered.
+            columns = [desc[0].lower() for desc in self.db.cursor.description]
+            param_dict = dict(zip(columns, row))
 
         return patient_records, param_dict
 
 
-    def _merge_abstracted_intervals(self, patient_id, df, relevance_hours):
+    def _merge_abstracted_intervals(self, patient_id, df):
         """
         Merge overlapping abstracted intervals row-by-row, extending each edge by a 'relevance' duration (e.g., 24h),
         but prevent overlaps between different intervals of the same LOINC code and different values.
@@ -297,7 +299,6 @@ class Mediator:
         Args:
             patient_id (str): The patient ID to which the abstracted records belong to.
             df (pd.DataFrame): Abstracted intervals with columns ['LOINC-Code', 'Value', 'StartDateTime', 'EndDateTime']
-            relevance_hours (int): Number of hours to extend interval edges (default: 24)
 
         Returns:
             pd.DataFrame: Merged intervals with extended relevance windows, no overlap between distinct values.
