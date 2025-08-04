@@ -225,11 +225,12 @@ class DataAccess:
             count = self.fetch_records(f"SELECT COUNT(*) FROM {table_name};", ())[0][0]
             print(f"[Info]: Table '{table_name}' - Rows: {count}")
 
+
 if __name__ == '__main__':
     data = DataAccess()
     
     # --- Validate results ---
-    preview = data.fetch_records("SELECT * FROM Measurements WHERE PatientId=147258369 ORDER BY StartDateTime LIMIT 20", ())
+    preview = data.fetch_records("SELECT * FROM Measurements WHERE PatientId=147258369 ORDER BY ValidStartTime LIMIT 20", ())
     if not preview:
         print("[Info] No records found in Measurements table.")
     else:

@@ -1,11 +1,13 @@
 import os
+import json
+import subprocess
 import sys
 import tkinter as tk
 from tkinter import ttk, messagebox
 
 # Local Code
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from backend.businesslogic import PatientRecord
+from backend.businesslogic import PatientRecord, analyze_patient_clinical_state
 from datetime import datetime
 
 class CreateToolTip:
@@ -57,7 +59,7 @@ class Application(tk.Tk):
         header_frame.pack(pady=5)
 
         # logo
-        logo_path = os.path.join("images", "logo.png")
+        logo_path = os.path.join("frontend", "images", "logo.png")
         self.logo = tk.PhotoImage(file=logo_path).subsample(2, 2)  # Resize to 50%
 
         tk.Label(header_frame, image=self.logo).pack(side="left", padx=10)
@@ -73,6 +75,18 @@ class Application(tk.Tk):
         self._create_measure_insert_tab()
         self._create_measure_update_tab()
         self._create_measure_delete_tab()
+
+        # Snapshot Dashboard Trigger (available on every screen)
+        snapshot_frame = tk.Frame(self)
+        snapshot_frame.pack(pady=10)
+
+        tk.Label(snapshot_frame, text="Patient Snapshot:").pack(side="left", padx=5)
+        self.snapshot_dashboard_entry = tk.Entry(snapshot_frame, width=30)
+        self.snapshot_dashboard_entry.pack(side="left", padx=5)
+        CreateToolTip(self.snapshot_dashboard_entry,
+                      "• Format: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS\n• e.g. 2024-08-01 or 2024-08-01 12:00:00")
+
+        tk.Button(snapshot_frame, text="Launch Dashboard", command=self.run_dashboard).pack(side="left", padx=10)
     
 
     # ----------------------------------- Tool tip control -----------------------------------
@@ -347,6 +361,33 @@ class Application(tk.Tk):
                 self.delete_measurement_delete_result.configure(state='disabled')  # disable editing again
             except Exception as e:
                 messagebox.showerror("Error", str(e))
+
+
+    def run_dashboard(self):
+            snapshot_input = self.snapshot_dashboard_entry.get().strip()
+            if not snapshot_input:
+                snapshot_input = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            try:
+                result, actual_snapshot_time = analyze_patient_clinical_state(snapshot_date=snapshot_input)
+
+                final_result = {
+                    "snapshot_date": actual_snapshot_time,
+                    **result
+                }
+                # Save state results in data dir (backend)
+                data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
+                json_path = os.path.join(data_dir, "snapshot_output.json")
+                with open(json_path, "w", encoding="utf-8") as f:
+                    json.dump(final_result, f, indent=4, ensure_ascii=False)
+                
+                # Execute subprocess to launce streamlit app
+                subprocess.Popen([
+                    sys.executable, "-m", "streamlit", "run",
+                    os.path.join("frontend", "dashboard.py"),
+                    "--", f"--snapshot_path={json_path}"
+                ], cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+            except Exception as e:
+                messagebox.showerror("Error Running the dashboard!", f'\nDetails:\n{e}')
 
 
 if __name__ == '__main__':

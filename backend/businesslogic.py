@@ -16,6 +16,7 @@ from datetime import datetime
 from backend.dataaccess import DataAccess
 from backend.mediator import Mediator
 from backend.backend_config import *  # all query paths
+from backend.rule_processor import RuleProcessor
 
 data = DataAccess()
 
@@ -217,7 +218,7 @@ class PatientRecord:
         where_clause = " AND ".join(filters)
 
         # Read base query from file and insert where clause
-        with open(SEARCH_HISTORY_QUERY, 'r') as f:
+        with open(GET_HISTORY_QUERY, 'r') as f:
             base_query = f.read()
 
         final_query = base_query.replace("{where_clause}", where_clause)
@@ -529,12 +530,16 @@ class PatientRecord:
         return valid_start_time # returning the actual record deleted for logging on screen
     
 
-def abstract_data(snapshot_date):
+def abstract_data(snapshot_date=None):
     """
     Runs the Mediator abstraction engine for all patients in the DB as of the given snapshot_date.
     Stores the resulting records in the AbstractedMeasurements table.
     """
+    engine = Mediator()
 
+    # Fallback to current date-time if no snapshot date supplied
+    snapshot_date = datetime.now() if snapshot_date is None else snapshot_date
+    
     # Validate and normalize snapshot_date
     if isinstance(snapshot_date, str) and len(snapshot_date) <= 10:
         snapshot_date = validate_datetime(snapshot_date)
@@ -554,7 +559,6 @@ def abstract_data(snapshot_date):
 
     all_results = []
     for (patient_id,) in all_patients:
-        engine = Mediator()
         try:
             df = engine.run(patient_id, snapshot_date=snapshot_date).dropna(axis=1, how='all')
             if df.empty: continue
@@ -582,16 +586,87 @@ def abstract_data(snapshot_date):
         )
 
 
-if __name__ == "__main__":
-    data = DataAccess()
-    # snapshot_date = "2025-01-04 23:59:59"
-    # abstract_data(snapshot_date)
+def analyze_patient_clinical_state(snapshot_date=None):
+    """
+    Process rules for all patients at a given snapshot time.
+    Uses abstract_data function to get abstracted measurements for each patient.
 
-    # --- Validate results ---
-    preview = data.fetch_records("SELECT * FROM AbstractedMeasurements WHERE PatientId=123456782 AND LoincNum='39106-0' ORDER BY StartDateTime LIMIT 100", ())
-    if not preview:
-        print("[Info] No records found in AbstractedMeasurements.")
-    else:
-        print("[Info] Preview of inserted abstracted records:")
-        for row in preview:
-            print(row)
+    Args:
+        snapshot_date (str or datetime): Snapshot date-time for evaluation. If None, automatically uses current time.
+
+    Returns:
+        dict: Dictionary of all patients results, keyed by patient ID
+    """
+    processor = RuleProcessor()
+    
+    # Fallback to current date-time if no snapshot date supplied
+    snapshot_date = datetime.now() if snapshot_date is None else snapshot_date
+
+    # Validate and normalize snapshot_date
+    if isinstance(snapshot_date, str) and len(snapshot_date) <= 10:
+        snapshot_date = validate_datetime(snapshot_date)
+        snapshot_date = snapshot_date.replace(hour=23, minute=59, second=59)
+    elif isinstance(snapshot_date, str):
+        snapshot_date = validate_datetime(snapshot_date)
+
+    snapshot_str = snapshot_date.strftime('%Y-%m-%d %H:%M:%S')
+
+    # run data abstraction for the input snapshot time
+    try:
+        abstract_data(snapshot_str)
+    except Exception as e:
+        raise Exception(f"Exception in data abstraction: {e}")
+
+    # Get all patients who have abstracted time intervals during the snapshot time (relevant events from the abstraction results)
+    # Remember - Intervals retain for 24h after last raw record
+    df = pd.DataFrame(data.fetch_records(
+        GET_ABSTRACTED_DATA_QUERY,
+        (snapshot_str, snapshot_str)), columns=[
+                'PatientId', 'LOINC-Code', 'Concept Name', 'Value', 'StartDateTime', 'EndDateTime'
+            ])
+
+    if df.empty:
+        raise ValueError("No patients found with relevant data in the selected date-time")
+
+    all_results = {}
+
+    for patient_id, patient_data in df.groupby('PatientId'):
+        try:
+            # Get the abstracted records of 1 patient
+            # Keep only most recent occurrence of each LOINC code
+            patient_data['StartDateTime'] = pd.to_datetime(patient_data['StartDateTime'])
+            patient_data = patient_data.sort_values('StartDateTime', ascending=False).drop_duplicates('LOINC-Code', keep='first')
+
+            # Process rules for this patient
+            patient_results = processor.process_patient_rules(patient_id, patient_data)
+            all_results[patient_id] = patient_results
+
+        except Exception as e:
+            print(f"[Error] Failed to process rules for patient {patient_id}: {e}")
+            all_results[patient_id] = {
+                "PatientId": patient_id,
+                "hematological_state": "Error",
+                "systemic_toxicity": "Error",
+                "treatment_recommendations": "Error"
+            }
+
+    return all_results, snapshot_str
+
+
+
+if __name__ == "__main__":
+    snapshot_date = "2025-08-02"
+
+    # # --- Validate results ---
+    # preview = data.fetch_records("SELECT * FROM AbstractedMeasurements WHERE PatientId=123456782 AND LoincNum='39106-0' ORDER BY StartDateTime LIMIT 100", ())
+    # abstract_data(snapshot_date)
+    # if not preview:
+    #     print("[Info] No records found in AbstractedMeasurements.")
+    # else:
+    #     print("[Info] Preview of inserted abstracted records:")
+    #     for row in preview:
+    #         print(row)
+    
+    print("Running tests...")
+    result, _ = analyze_patient_clinical_state(snapshot_date)
+    print(result)

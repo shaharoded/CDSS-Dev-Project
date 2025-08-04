@@ -1,0 +1,33 @@
+{
+  "rule_name": "systemic_toxicity",
+  "hierarchy_level": "first_tier",
+  "synthetic_loinc": "TOXI-001",
+  "description": "4:1 Table Lookup for Systemic Toxicity - exact column match from clinical protocol",
+  "logic_type": "TABLE_LOOKUP",
+  "input_parameters": ["Fever_Level", "Chills", "Skin-Look", "Allergic-State"],
+  "lookup_table": {
+    "GRADE I": {
+      "Fever_Level": ["Normal-Elevated"],
+      "Skin-Look": ["Erythema"],
+      "Allergic-State": ["Edema"]
+    },
+    "GRADE II": {
+      "Fever_Level": ["High"],
+      "Chills": ["Shaking"],
+      "Skin-Look": ["Vesiculation"],
+      "Allergic-State": ["Bronchospasm"]
+    },
+    "GRADE III": {
+      "Fever_Level": ["Very High"],
+      "Chills": ["Rigor"],
+      "Skin-Look": ["Desquamation"],
+      "Allergic-State": ["Sever-Bronchospasm"]
+    },
+    "GRADE IV": {
+      "Fever_Level": ["Very High"],
+      "Chills": ["Rigor"],
+      "Skin-Look": ["Exfoliation"],
+      "Allergic-State": ["Anaphylactic-Shock"]
+    }
+  }
+}

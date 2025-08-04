@@ -4,6 +4,7 @@ cdss.db
 cdss.db-journal
 Mini-Project*
 *tmp_backup*
+snapshot_output.json
 
 # Ignore an entire folder
 venv/

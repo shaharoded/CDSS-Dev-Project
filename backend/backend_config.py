@@ -24,19 +24,20 @@ CHECK_PATIENT_BY_ID_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'ch
 CHECK_LOINC_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_lonic.sql')
 CHECK_RECORD_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_record.sql')
 CHECK_FUTURE_RECORD_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_future_record.sql')
-CHECK_LOINC_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_lonic.sql')
-CHECK_RECORD_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_record.sql')
-CHECK_FUTURE_RECORD_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_future_record.sql')
 CHECK_TABLE_EXISTS_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_table_exists.sql')
-SEARCH_HISTORY_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_history.sql')
+GET_HISTORY_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_history.sql')
 UPDATE_MEASUREMENT_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'update_measurement.sql') # In-place value update, currently irrelevant.
 UPDATE_DELETION_TIME_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'update_record_deletion_time.sql')
 GET_EXISTING_UNIT_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_existing_unit.sql')
 GET_LOINC_BY_COMPONENT_FL_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_loinc_by_component_from_loinc.sql')
 GET_LOINC_BY_COMPONENT_FM_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_loinc_by_component_from_measurements.sql')
 GET_LOINC_ALLOWED_VALUES = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_loinc_allowed_values.sql') # From LOINC table
-GET_LATEST_VALIDTIME_FOR_DAY_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'select_latest_validtime_for_day.sql')
+GET_LATEST_VALIDTIME_FOR_DAY_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_latest_validtime_for_day.sql')
 GET_PATIENT_PARAMS_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_patient_params.sql')
+GET_ABSTRACTED_DATA_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'get_abstracted_data.sql')
 
 # TAK Folder
 TAK_FOLDER = os.path.join(PROJECT_ROOT, 'backend', 'taks')
+
+# rules
+RULES_FOLDER = os.path.join(PROJECT_ROOT, 'backend', 'rules')
