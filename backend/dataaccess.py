@@ -20,7 +20,7 @@ class DataAccess:
         '''
         self.db_path = db_path
         self.conn = sqlite3.connect(db_path)
-        self.cur = self.conn.cursor()
+        self.cursor = self.conn.cursor()
 
         if not self.__check_tables_exist():
             print('[Info]: Building a DB instance. This might take a few minutes...')
@@ -80,7 +80,7 @@ class DataAccess:
         else:
             query = query_or_path  # assume raw SQL
 
-        self.cur.execute(query, params)
+        self.cursor.execute(query, params)
         self.conn.commit()
     
     def fetch_records(self, query_or_path, params):
@@ -99,7 +99,7 @@ class DataAccess:
         else:
             query = query_or_path  # assume raw SQL
 
-        return self.cur.execute(query, params).fetchall()
+        return self.cursor.execute(query, params).fetchall()
     
     def __execute_script(self, script_path):
         """
@@ -112,7 +112,7 @@ class DataAccess:
         """
         with open(script_path, 'r') as file:
             script = file.read()
-        self.cur.executescript(script)
+        self.cursor.executescript(script)
         self.conn.commit()
 
     def __check_tables_exist(self):
