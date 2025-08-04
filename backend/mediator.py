@@ -342,7 +342,7 @@ class Mediator:
         return df_merged
 
 
-    def run(self, patient_id, snapshot_date=None, relevance=24):
+    def run(self, patient_id, snapshot_date, relevance=24):
         """
         Run the temporal abstraction engine for a single patient.
 
@@ -354,16 +354,13 @@ class Mediator:
 
         Args:
             patient_id (str or int): Patient identifier in the database.
-            snapshot_date (str, optional): View of the DB up to this date (default: today).
+            snapshot_date (str): View of the DB up to this date (default: today).
             relevance (int, optional): Number of hours each measure is relevant for (default: 24 hours).
 
         Returns:
             pd.DataFrame: All records in unified format:
                 ['PatientId', 'LOINC-Code', 'Concept Name', 'Value', 'StartDateTime', 'EndDateTime', 'Source']
         """
-        patient_id = str(patient_id).strip()
-        snapshot_date = snapshot_date or datetime.today().strftime('%Y-%m-%d')
-
         # Step 1: Retrieve raw measurements + patient attributes (e.g., sex)
         raw_rows, params = self._get_patient_records(patient_id, snapshot_date)
         if not raw_rows:
@@ -405,7 +402,7 @@ class Mediator:
         # Step 4: Merge abstracted intervals (safely across all LOINC codes)
         if abstracted_records:
             merged_records = self._merge_abstracted_intervals(
-                patient_id, pd.DataFrame(abstracted_records), relevance_hours=relevance)
+                patient_id, pd.DataFrame(abstracted_records))
         else:
             merged_records = pd.DataFrame(columns=[
                 "PatientId", "LOINC-Code", "Concept Name", "Value", "StartDateTime", "EndDateTime", "Source"
