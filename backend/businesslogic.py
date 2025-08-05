@@ -132,7 +132,7 @@ class PatientRecord:
         if not first_name:
             raise ValueError("You cannot search for a patient without their first name.")
         if not last_name:
-            raise ValueError("You cannot search for a patient without their first name.")
+            raise ValueError("You cannot search for a patient without their last name.")
         
         # Input cleanup
         first_name, last_name = str(first_name).strip(), str(last_name).strip()
