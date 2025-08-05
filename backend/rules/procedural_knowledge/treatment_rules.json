@@ -2,7 +2,7 @@
   "rule_name": "treatment_recommendations",
   "execution_order": 2,
   "synthetic_loinc": "TREAT-001",
-  "description": "4:1 AND Treatment table mapping Sex (Gender) + Hemoglobin-level + Hematological-state + Systemic Toxicity to treatment recommendations",
+  "description": "4:1 AND Treatment recommendations table mapping, stops at first match.",
   "note": "Treatment recommendations based on 4 input parameters. Returns list of treatment actions.",
   "logic_type": "AND",
   "input_parameters": ["sex", "Hemoglobin_Level", "hematological_state", "systemic_toxicity"],

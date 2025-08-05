@@ -612,11 +612,11 @@ def analyze_patient_clinical_state(snapshot_date=None):
 
     snapshot_str = snapshot_date.strftime('%Y-%m-%d %H:%M:%S')
 
-    # # Run data abstraction for the input snapshot time (results saved in place in the DB)
-    # try:
-    #     abstract_data(snapshot_str)
-    # except Exception as e:
-    #     raise Exception(f"Exception in data abstraction: {e}")
+    # Run data abstraction for the input snapshot time (results saved in place in the DB)
+    try:
+        abstract_data(snapshot_str)
+    except Exception as e:
+        raise Exception(f"Exception in data abstraction: {e}")
 
     # Get all patients who have abstracted time intervals during the snapshot time (relevant events from the abstraction results)
     # Remember - Intervals retain for 24h after last raw record
@@ -632,8 +632,6 @@ def analyze_patient_clinical_state(snapshot_date=None):
     all_results = {}
 
     for patient_id, patient_data in df.groupby('PatientId'):
-        if not patient_id == '911538590':
-            continue
         # Get the abstracted records of 1 patient
         # Keep only most recent occurrence of each LOINC code
         patient_data['StartDateTime'] = pd.to_datetime(patient_data['StartDateTime'])
@@ -641,11 +639,8 @@ def analyze_patient_clinical_state(snapshot_date=None):
         patient_data = patient_data.sort_values('StartDateTime', ascending=False).drop_duplicates('LOINC-Code', keep='first')
 
         # Process rules for this patient
-        processor.debug_patient_rule_flow(patient_id, patient_data, snapshot_date)
-        return
         patient_results = processor.run(patient_id=patient_id, 
-                                        df=patient_data, 
-                                        snapshot_date=snapshot_date)
+                                        df=patient_data)
         all_results[patient_id] = patient_results
 
     return all_results, snapshot_str

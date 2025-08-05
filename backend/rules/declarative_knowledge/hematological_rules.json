@@ -2,7 +2,7 @@
   "rule_name": "hematological_state",
   "execution_order": 1,
   "synthetic_loinc": "HEMA-001",
-  "description": "2:1 AND table for Hemoglobin + WBC",
+  "description": "2:1 AND table for Hemoglobin + WBC, stops at first match",
   "input_parameters": ["Hemoglobin_Level", "WBC_Level"],
   "logic_type": "AND",
   "rules": {

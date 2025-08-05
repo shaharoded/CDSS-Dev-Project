@@ -211,51 +211,57 @@ class RuleProcessor:
             raise Exception(f"Failed to load rule: {rule_path}: {e}")
     
 
-    def _search_param(self, param_list, df, patient_id):
+    def _search_param(self, param_list, df, patient_id, state=None):
         """
-        Retrieve latest value for each parameter from either:
-        - The Patients DB table (if the param matches a column)
-        - The abstracted DataFrame (via ConceptName)
-
+        Retrieve latest value for each parameter from:
+        1) Patients table (columns returned by GET_PATIENT_PARAMS_QUERY)
+        2) Current in-memory state cache (results already computed in this run)
+        3) The abstracted DataFrame (via ConceptName)
+        
         The query GET_PATIENT_PARAMS_QUERY will return all available column parameters of a patient.
 
         Args:
             param_list (list): List of parameter names (case-insensitive)
             df (pd.DataFrame): Abstracted measurements for a single patient
             patient_id (str): Patient ID (required for Patients table lookup)
+            state (dict, optional): Current calculated state based on prior calculated rules.
 
         Returns:
             dict: {original_param_name: value for patient or None}
         
-        NOTE: df is updated at every iteration (rule) of run()
-        NOTE: This function outputs param_values which is a dict of all existing parameters in current df
+        NOTE: This function outputs param_values which is a dict of all existing parameters in current df + state
               that can satisfy a specific rule (based on its param_list).
         """
-        # Normalize param list to lowercase for internal logic
+        state = state or {}
         param_list_lower = [p.lower() for p in param_list]
-        param_values = {original: None for original in param_list}  # preserve original casing in output
+        param_values = {original: None for original in param_list}
 
-        # Step 1: Fetch Patients table data
+        # --- Patients table ---
         try:
             results = self.db.fetch_records(GET_PATIENT_PARAMS_QUERY, (patient_id,))
             if not results:
                 raise Exception(f"No record found for PatientId {patient_id}")
-
             row = results[0]
             columns = [desc[0].lower() for desc in self.db.cursor.description]
             patients_data = dict(zip(columns, row))
-
         except Exception as e:
             raise Exception(f"Failed to retrieve Patients table data for {patient_id}: {e}")
 
-        # Step 2: Match parameters (first from Patients table, then from DataFrame)
+        # --- Resolve each param ---
         for original_param, param_lower in zip(param_list, param_list_lower):
-            # 2A: Check in Patients table
+            # 1) Patients table
             if param_lower in patients_data:
                 param_values[original_param] = patients_data[param_lower]
                 continue
 
-            # 2B: Check in DataFrame
+            # 2) State cache (results already computed in this run)
+            #    Keep lookup case-insensitive by normalizing keys
+            state_lookup = {k.lower(): v for k, v in state.items()}
+            if param_lower in state_lookup and state_lookup[param_lower] is not None:
+                param_values[original_param] = state_lookup[param_lower]
+                continue
+
+            # 3) DataFrame (synthetic/abstracted rows)
             match = df[df['ConceptName'].str.lower() == param_lower]
             if not match.empty:
                 latest_row = match.loc[match['StartDateTime'].idxmax()]
@@ -335,16 +341,13 @@ class RuleProcessor:
             return self._apply_AND_rule(rule_json, input_values)
     
 
-    def run(self, patient_id, df, snapshot_date, relevance=24):
+    def run(self, patient_id, df):
         """
         Process all rules for a single patient with consistent key ordering.
 
         Args:
             patient_id (str or int): The unique ID of a patient from the DB.
             df (pd.DataFrame): The patient's abstracted data extracted from the DB.
-            snapshot_date (pd.datetime): Date-time input for the relative time point in the DB. 
-            relevance (int, optional): Number of hours each synthetic state is relevant for (default: 24 hours before + after).
-                                       NOTE: The relevance of a synthetic state is currently not used and df is not returned. Legacy.
 
         Returns: 
             results (dict): A patient's state dictionary that collects all state information + treatment.
@@ -358,9 +361,6 @@ class RuleProcessor:
             "PatientId": patient_id
         }
 
-        start_time = pd.to_datetime((snapshot_date - timedelta(hours=relevance)).strftime('%Y-%m-%d %H:%M:%S'))
-        end_time = pd.to_datetime((snapshot_date + timedelta(hours=relevance)).strftime('%Y-%m-%d %H:%M:%S'))
-
         # Process rules iteratively tier-by-tier (each tier sorted by execution_order)
         for tier in self.rule_paths.keys():
             for rule_path_info in self.rule_paths[tier]:
@@ -370,37 +370,26 @@ class RuleProcessor:
                 rule_name, param_list = rule_json['rule_name'], rule_json['input_parameters']
 
                 # Apply rule on current calculated state
-                input_values = self._search_param(param_list, df, patient_id)
+                input_values = self._search_param(param_list, df, patient_id, state=results)
                 classification = self._apply_rule(rule_json, input_values)
 
                 # Add results to patient's state
+                classification = ';'.join(classification) if isinstance(classification, list) else classification
                 results[rule_name] = classification
-
-                # Add result to temporary DataFrame (in-place append)
-                df.loc[len(df)] = [
-                    patient_id,                     # PatientId
-                    rule_json['synthetic_loinc'],   # LOINC-Code
-                    rule_name,                      # ConceptName
-                    str(classification),            # Value (casted as str)
-                    start_time,                     # StartDateTime
-                    end_time                        # EndDateTime
-                ]
 
         return results
     
 
-    def debug_patient_rule_flow(self, patient_id, df, snapshot_date, relevance=24):
+    def debug_patient_rule_flow(self, patient_id, df):
         """
         Debug one patient's rule progression across tiers.
         Prints input values and classifications for each rule.
         """
+        df = df.copy()
         print(f"\n[DEBUG] Starting rule trace for patient {patient_id}")
         print(f"\n[Initial Abstracted Dataset]")
         print(df)
         results = {"PatientId": patient_id}
-
-        start_time = pd.to_datetime(snapshot_date - timedelta(hours=relevance))
-        end_time = pd.to_datetime(snapshot_date + timedelta(hours=relevance))
 
         for tier in self.rule_paths.keys():
             print(f"\n[DEBUG] Processing tier: {tier}")
@@ -409,22 +398,42 @@ class RuleProcessor:
                 rule_json = self._load_rule(path)
                 rule_name, param_list = rule_json['rule_name'], rule_json['input_parameters']
 
-                input_values = self._search_param(param_list, df, patient_id)
+                input_values = self._search_param(param_list, df, patient_id, state=results)
                 print(f"[DEBUG] Rule: {rule_name}")
                 print(f"[DEBUG] Input Values: {input_values}")
 
                 classification = self._apply_rule(rule_json, input_values)
+
+                # Add results to patient's state
+                classification = ';'.join(classification) if isinstance(classification, list) else classification
+                results[rule_name] = classification
                 print(f"[DEBUG] Classification: {classification}")
 
-                results[rule_name] = classification
-
-                # Add to synthetic DF
-                df.loc[len(df)] = [
-                    patient_id,
-                    rule_json['synthetic_loinc'],
-                    rule_name,
-                    classification,
-                    start_time,
-                    end_time
-                ]
         return results
+    
+
+if __name__ == "__main__":
+    snapshot_date = "2025-08-02 23:59:59"
+    data = DataAccess()
+    proc = RuleProcessor()
+    patient_id = '147258369'
+    df = pd.DataFrame(data.fetch_records(
+    GET_ABSTRACTED_DATA_QUERY,
+    (snapshot_date, snapshot_date)), columns=[
+            'PatientId', 'LOINC-Code', 'ConceptName', 'Value', 'StartDateTime', 'EndDateTime'
+        ])
+
+    # --- Validate results / abstract ---
+    if df.empty:
+        from backend.businesslogic import abstract_data
+        abstract_data(snapshot_date)
+        df = pd.DataFrame(data.fetch_records(
+        GET_ABSTRACTED_DATA_QUERY,
+        (snapshot_date, snapshot_date)), columns=[
+                'PatientId', 'LOINC-Code', 'ConceptName', 'Value', 'StartDateTime', 'EndDateTime'
+            ])
+        if df.empty:
+            raise ValueError(f"No patients found with relevant data in the selected snapshot date-time {snapshot_date}")
+    
+    df = df[df['PatientId'] == patient_id].copy()
+    proc.debug_patient_rule_flow(patient_id, df)

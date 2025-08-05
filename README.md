@@ -105,7 +105,7 @@ You can run the following PowerShell command in the root repository to test your
 ```bash
 (from root)
 python -m backend.mediator
-python -m backend.rule_processor (currently no __main__)
+python -m backend.rule_processor
 ```
 
 Need to remove the DB you created?
