@@ -648,11 +648,17 @@ def analyze_patient_clinical_state(snapshot_date=None):
 
 
 if __name__ == "__main__":
-    snapshot_date = "2025-08-02 23:59:59"
+    snapshot_date = "2025-08-05 23:59:59"
 
-    # # --- Validate results ---
-    # preview = data.fetch_records("SELECT * FROM AbstractedMeasurements WHERE PatientId=123456782 AND LoincNum='39106-0' ORDER BY StartDateTime LIMIT 100", ())
+    # --- Validate results ---
     # abstract_data(snapshot_date)
+    df = pd.DataFrame(data.fetch_records(
+        GET_ABSTRACTED_DATA_QUERY,
+        (snapshot_date, "2015-08-05 23:59:59")), columns=[
+                'PatientId', 'LOINC-Code', 'ConceptName', 'Value', 'StartDateTime', 'EndDateTime'
+            ])
+    df.to_csv("AbstractedMeasurements.csv", index=False)
+    # preview = data.fetch_records("SELECT * FROM AbstractedMeasurements ORDER BY StartDateTime", ())
     # if not preview:
     #     print("[Info] No records found in AbstractedMeasurements.")
     # else:
@@ -660,6 +666,6 @@ if __name__ == "__main__":
     #     for row in preview:
     #         print(row)
     
-    print("Running tests...")
-    result, _ = analyze_patient_clinical_state(snapshot_date)
-    print(result)
+    # print("Running tests...")
+    # result, _ = analyze_patient_clinical_state(snapshot_date)
+    # print(result)
