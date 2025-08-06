@@ -21,7 +21,7 @@
       "Fever_Level": ["Very High"],
       "Chills": ["Rigor"],
       "Skin-Look": ["Desquamation"],
-      "Allergic-State": ["Sever-Bronchospasm"]
+      "Allergic-State": ["Severe-Bronchospasm"]
     },
     "cond-4": {
       "Fever_Level": ["Very High"],
