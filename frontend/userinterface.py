@@ -84,7 +84,7 @@ class Application(tk.Tk):
         self.snapshot_dashboard_entry = tk.Entry(snapshot_frame, width=30)
         self.snapshot_dashboard_entry.pack(side="left", padx=5)
         CreateToolTip(self.snapshot_dashboard_entry,
-                      "• Format: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS\n• e.g. 2024-08-01 or 2024-08-01 12:00:00")
+                      "• Format: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS\n• e.g. 2024-08-01 or 2024-08-01 12:00:00\n• If empty, will automatically use the current date-time")
 
         tk.Button(snapshot_frame, text="Launch Dashboard", command=self.run_dashboard).pack(side="left", padx=10)
     
