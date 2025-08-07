@@ -1,24 +1,24 @@
-import sys
 import os
 # Override default Streamlit port to avoid conflicts - must be set before importing streamlit
 
 import streamlit as st
 import json
+import textwrap
+import sys
 import pandas as pd
 import matplotlib.pyplot as plt
+from backend.dataaccess import DataAccess
 import datetime
 from io import BytesIO
 
-
-from backend.dataaccess import DataAccess
-da = DataAccess()
+data_access = DataAccess()
 
 
 # ---------- Helpers ---------- #
 def _get_patient_name(patient_id):
     """Helper to extract patient name based on ID"""
     query = "SELECT [FirstName], [LastName] FROM Patients WHERE PatientId = ?"
-    result = da.fetch_records(query, (patient_id,))
+    result = data_access.fetch_records(query, (patient_id,))
     first, last = result[0]
     full_name = f"{first} {last}"
     return full_name
@@ -28,17 +28,33 @@ def _load_snapshot_data(path):
     """Load pre-calculated json with patients states"""
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
+    
+
+# ---------- NEW sort logic ----------
+def _priority(info):
+    tox = info.get('systemic_toxicity', '').strip().upper()
+    hema = info.get('hematological_state', '').strip().upper()
+
+    if tox == 'GRADE IV':
+        return 5            # dark-red, blinking
+    if tox in ('GRADE III', 'GRADE II'):
+        return 4            # red
+    if tox == 'GRADE I' or hema != 'NORMAL':
+        return 3            # yellow
+    if hema == 'UNKNOWN':
+        return 2            # no-colour
+    return 1                # green / everything else
+
+
+# Extract snapshot path from CLI args
+snapshot_path = None
+for arg in sys.argv:
+    if arg.startswith("--snapshot_path="):
+        snapshot_path = arg.split("=", 1)[1]
+        break
 
 
 if __name__ == '__main__':
-
-    # Extract snapshot path from CLI args
-    snapshot_path = None
-    for arg in sys.argv:
-        if arg.startswith("--snapshot_path="):
-            snapshot_path = arg.split("=", 1)[1]
-            break
-
     # Page Setup
     st.set_page_config(page_title="Patient Dashboard", layout="wide")
 
@@ -46,14 +62,14 @@ if __name__ == '__main__':
     st.markdown("""
     <script>
     function toggleTreatment(patientId, treatmentIndex) {
-        const checkbox = document.getElementById(check_${patientId}_${treatmentIndex});
-        const text = document.getElementById(text_${patientId}_${treatmentIndex});
+        const checkbox = document.getElementById(`check_${patientId}_${treatmentIndex}`);
+        const text = document.getElementById(`text_${patientId}_${treatmentIndex}`);
         if (checkbox.checked) {
             text.classList.add('treatment-completed');
         } else {
             text.classList.remove('treatment-completed');
         }
-        localStorage.setItem(treatment_${patientId}_${treatmentIndex}, checkbox.checked);
+        localStorage.setItem(`treatment_${patientId}_${treatmentIndex}`, checkbox.checked);
     }
     window.addEventListener('load', function() {
         document.querySelectorAll('.treatment-checkbox').forEach(cb => {
@@ -210,6 +226,11 @@ if __name__ == '__main__':
                 animation: none;
             }
         }
+        /* --- NEW status colours --- */
+        .status-darkred {background:#991b1b;color:#fff;border-left:6px solid #7f1d1d;}
+        .status-red      {background:#fee2e2;border-left:6px solid #dc2626;}
+        .status-yellow   {background:#fefce8;border-left:6px solid #facc15;}
+        .status-green    {background:#ecfdf5;border-left:6px solid #10b981;}
 
         .grade-I { background-color: #ecfdf5; border-left: 6px solid #10b981; }
         .grade-II { background-color: #fefce8; border-left: 6px solid #facc15; }
@@ -405,79 +426,105 @@ if __name__ == '__main__':
 
     # Sort by toxicity
     toxicity_order = {"GRADE IV": 4, "GRADE III": 3, "GRADE II": 2, "GRADE I": 1, "UNKNOWN": 0}
-    filtered = dict(sorted(
-        filtered.items(),
-        key=lambda item: toxicity_order.get(item[1].get('systemic_toxicity', 'UNKNOWN').strip().upper(), 0),
-        reverse=True
-    ))
+    filtered = dict(sorted(filtered.items(),
+                        key=lambda item: _priority(item[1]),
+                        reverse=True))
 
     # ------------------ Patient Records ------------------
     st.markdown('<div class="section-title">🗂️ Patient Records</div>', unsafe_allow_html=True)
     cols = st.columns(2)
+
     for idx, (pid, info) in enumerate(filtered.items()):
-        col = cols[idx % 2]
+        col  = cols[idx % 2]
         name = patient_names.get(pid, pid)
-        treatments = [t.strip() for t in info.get('treatment_recommendations', '').split(';')] if info.get('treatment_recommendations') else []
-        tox_val = info.get('systemic_toxicity', '').strip().upper()
+
+        treatments = (
+            [t.strip() for t in info.get('treatment_recommendations', '').split(';')]
+            if info.get('treatment_recommendations') else []
+        )
+
+        tox_val  = info.get('systemic_toxicity',  '').strip().upper()
         hema_val = info.get('hematological_state', '').strip().upper()
 
-        # Determine grade class & colors
-        toxicity_grades = ['GRADE I', 'GRADE II', 'GRADE III', 'GRADE IV']
-        if tox_val in toxicity_grades:
-            # All toxicity levels in red
-            if tox_val == 'GRADE I':
-                cls = 'grade-I'
-            elif tox_val == 'GRADE II':
-                cls = 'grade-II'
-            elif tox_val == 'GRADE III':
-                cls = 'grade-III'
-            elif tox_val == 'GRADE IV':
-                cls = 'grade-IV'
-            tox_col = '#dc2626'  # Red for all toxicity levels
-            tox_tooltip = tox_val  # Display original value
-        elif tox_val == 'UNKNOWN':
-            cls = ''
-            tox_col = '#10b981'  # Green for UNKNOWN
-            tox_tooltip = 'No toxicity related concepts'  # Custom text for UNKNOWN
-        else:
-            cls = ''
-            tox_col = '#10b981'  # Green for all other values (including NO FIT etc.)
-            tox_tooltip = 'No toxicity related concepts'  # Custom text for other values
+        # ---------- CARD BACKGROUND ----------
+        tox_is_grade = tox_val in ('GRADE I', 'GRADE II', 'GRADE III', 'GRADE IV')
+        hema_unknown = hema_val == 'UNKNOWN'
 
-        # Determine Hematological color
-        hematological_values = ['PANCYTOPENIA', 'LEUKOPENIA', 'SUSPECTED POLYCYTEMIA VERA', 'ANEMIA', 'NORMAL', 'POLYHEMIA', 'SUSPECTED LEUKEMIA',
-                                'LEUKEMOID REACTION', 'SUSPECTED POLYCYTEMIA VERA']
+        # 🆕 1. no systemic toxicity **and** no hematological data  →  neutral / blue card
+        if (not tox_is_grade) and hema_unknown:
+            cls            = ''          # keep it white, or…
+            # cls = 'status-blue'        # …create such a class in CSS if you prefer a blue tint
+            critical_class = ''
+        elif tox_val == 'GRADE IV':
+            cls            = 'status-darkred'      # dark-red + blink
+            critical_class = 'critical'
+        elif tox_val in ('GRADE III', 'GRADE II'):
+            cls            = 'status-red'          # red
+            critical_class = ''
+        elif tox_val == 'GRADE I' or hema_val != 'NORMAL':
+            cls            = 'status-yellow'       # yellow
+            critical_class = ''
+        elif hema_val == 'UNKNOWN':
+            cls            = ''                    # no colour
+            critical_class = ''
+        else:
+            cls            = 'status-green'        # green
+            critical_class = ''
+
+        # ---------- TOXICITY CIRCLE ----------
+        if tox_val in ('GRADE I', 'GRADE II', 'GRADE III', 'GRADE IV'):
+            tox_col     = '#dc2626'                # always red when any grade present
+            tox_tooltip = tox_val
+        else:                                      # UNKNOWN / blank
+            tox_col     = '#10b981'                # green
+            tox_tooltip = 'No toxicity identified'
+
+        # ---------- HEMATOLOGY CIRCLE ----------
+        hematological_values = [
+            'PANCYTOPENIA', 'LEUKOPENIA', 'SUSPECTED POLYCYTEMIA VERA',
+            'ANEMIA', 'POLYHEMIA', 'SUSPECTED LEUKEMIA', 'LEUKEMOID REACTION'
+        ]
+
         if hema_val == 'NORMAL':
-            hema_col = '#10b981'  # Green for Normal
+            hema_col     = '#10b981'               # green
+            hema_tooltip = hema_val
         elif hema_val in hematological_values:
-            hema_col = '#dc2626'  # Red for all other values in the list
+            hema_col     = '#dc2626'               # red
+            hema_tooltip = hema_val
+        elif hema_val == 'UNKNOWN':
+            hema_col     = '#3b82f6'               # blue
+            hema_tooltip = 'Due to partial information,\n the state cannot be determined'
         else:
-            hema_col = '#3b82f6'  # Blue for values not in the list
+            hema_col     = '#3b82f6'               # blue (catch-all)
+            hema_tooltip = 'Due to partial information,\n the state cannot be determined'
 
-        # Determine CSS class for blinking in urgent cases
-        critical_class = 'critical' if tox_val == 'GRADE IV' else ''
-
+        # ---------- HTML CARD ----------
         items_html = ''.join(
-            f"<li class='treatment-item'><input type='checkbox' id='check_{pid}_{i}' class='treatment-checkbox' onchange=\"toggleTreatment('{pid}',{i})\"><span id='text_{pid}_{i}' class='treatment-text'>{t}</span></li>"
+            f"<li class='treatment-item'>"
+            f"<input type='checkbox' id='check_{pid}_{i}' class='treatment-checkbox' "
+            f"onchange=\"toggleTreatment('{pid}',{i})\">"
+            f"<span id='text_{pid}_{i}' class='treatment-text'>{t}</span></li>"
             for i, t in enumerate(treatments)
         ) or '<li>No recommendations</li>'
-        card = f"""
-        <div class='patient-card {cls} {critical_class}'>
-        <div class='patient-name'>👤 {name} (ID: {pid})</div>
-        <div class='field-title'>Treatment:</div>
-        <ul>{items_html}</ul>
-        <div class='indicator-container'>
-            <div class='indicator'>
-            <div class='indicator-circle' title='{tox_tooltip}' style='background-color:{tox_col};'></div>
-            <div class='indicator-label'>Toxicity</div>
-            </div>
-            <div class='indicator'>
-            <div class='indicator-circle' title='{hema_val}' style='background-color:{hema_col};'></div>
-            <div class='indicator-label'>Hematological</div>
-            </div>
-        </div>
-        </div>
-        """
+
+        card = "\n".join([
+            f"<div class='patient-card {cls} {critical_class}'>",
+            f"  <div class='patient-name'>👤 {name} (ID: {pid})</div>",
+            "  <div class='field-title'>Treatment:</div>",
+            f"  <ul>{items_html}</ul>",
+            "  <div class='indicator-container'>",
+            "    <div class='indicator'>",
+            f"      <div class='indicator-circle' title='{tox_tooltip}' style='background-color:{tox_col};'></div>",
+            "      <div class='indicator-label'>Toxicity</div>",
+            "    </div>",
+            "    <div class='indicator'>",
+            f"      <div class='indicator-circle' title='{hema_tooltip}' style='background-color:{hema_col};'></div>",
+            "      <div class='indicator-label'>Hematological</div>",
+            "    </div>",
+            "  </div>",
+            "</div>",
+        ])
+
         col.markdown(card, unsafe_allow_html=True)
 
     # ------------------ Summary Statistics ------------------
@@ -511,9 +558,8 @@ if __name__ == '__main__':
 
     # Toxicity Pie Chart
     with chart_cols[1]:  # Column 2
-        # Replace 'Unknown' with 'No toxicity related concepts' for display
         toxicity_data = [info.get('systemic_toxicity', 'Unknown') for info in filtered.values()]
-        toxicity_data = ['No toxicity related concepts' if x == 'Unknown' else x for x in toxicity_data]
+        toxicity_data = ['No toxicity identified' if x == 'Unknown' else x for x in toxicity_data]
         toxicity_series = pd.Series(toxicity_data)
         counts1 = toxicity_series.value_counts()
 
@@ -561,7 +607,9 @@ if __name__ == '__main__':
 
     # Hematological Pie Chart
     with chart_cols[2]:  # Column 3
-        hematological_series = pd.Series([info.get('hematological_state', 'Unknown') for info in filtered.values()])
+        hematological_data = [info.get('hematological_state', 'Unknown') for info in filtered.values()]
+        hematological_data = ['Due to partial information,\n the state cannot be determined' if x == 'Unknown' else x for x in hematological_data]
+        hematological_series = pd.Series(hematological_data)
         counts2 = hematological_series.value_counts()
 
         fig2, ax2 = plt.subplots(figsize=(4, 2.5))
@@ -570,7 +618,7 @@ if __name__ == '__main__':
         colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7B801', '#E17055']
 
 
-        # Create pie chart with counts instead of percentages
+        # Create pie chart with counts
         def make_autopct(values):
             def my_autopct(pct):
                 total = sum(values)
