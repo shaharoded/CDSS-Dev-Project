@@ -648,7 +648,7 @@ def analyze_patient_clinical_state(snapshot_date=None):
 
 
 if __name__ == "__main__":
-    snapshot_date = "2025-08-06 23:59:59"
+    snapshot_date = "2025-08-02 23:59:59"
 
     # --- Validate abstraction results (all records) ---
     abstract_data(snapshot_date)
