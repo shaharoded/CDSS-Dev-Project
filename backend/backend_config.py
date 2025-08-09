@@ -21,7 +21,7 @@ INSERT_ABSTRACTED_MEASUREMENT_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'que
 # SQL Queries
 CHECK_PATIENT_BY_NAME_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_patient_by_name.sql')
 CHECK_PATIENT_BY_ID_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_patient_by_id.sql')
-CHECK_LOINC_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_lonic.sql')
+CHECK_LOINC_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_loinc.sql')
 CHECK_RECORD_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_record.sql')
 CHECK_FUTURE_RECORD_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_future_record.sql')
 CHECK_TABLE_EXISTS_QUERY = os.path.join(PROJECT_ROOT, 'backend', 'queries', 'check_table_exists.sql')
