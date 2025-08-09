@@ -21,6 +21,7 @@ class DataAccess:
         self.db_path = db_path
         self.conn = sqlite3.connect(db_path)
         self.cursor = self.conn.cursor()
+        print(f"[DEBUG] Connected to SQLite: {self.db_path}")
 
         if not self.__check_tables_exist():
             print('[Info]: Building a DB instance. This might take a few minutes...')
